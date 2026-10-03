@@ -28,8 +28,8 @@ impl Hud {
         draw_text(&best_str, 250.0, 42.0, 16.0, Color::new(0.95, 0.8, 0.3, 0.85));
 
         // Stardust Currency
-        let dust_str = format!("✦ {}", stardust);
-        draw_text(&dust_str, 250.0, 75.0, 24.0, Color::new(0.4, 0.9, 1.0, 0.95));
+        let dust_str = format!("STARDUST: {}", stardust);
+        draw_text(&dust_str, 250.0, 75.0, 22.0, Color::new(0.4, 0.9, 1.0, 0.95));
 
         // Next queued planet preview box
         let preview_x = VIRTUAL_WIDTH - 100.0;
@@ -55,7 +55,7 @@ impl Hud {
             draw_rectangle(30.0, 155.0, VIRTUAL_WIDTH - 60.0, 48.0, banner_color);
             draw_rectangle_lines(30.0, 155.0, VIRTUAL_WIDTH - 60.0, 48.0, 2.0, WHITE);
 
-            let warn_text = format!("⚠️ EVENT HORIZON OVERFLOW: {:.1}s", time_left);
+            let warn_text = format!("CRITICAL OVERFLOW: {:.1}s", time_left);
             draw_text(&warn_text, 55.0, 187.0, 22.0, WHITE);
         }
     }

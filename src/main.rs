@@ -48,6 +48,8 @@ async fn main() {
 
     let virtual_camera = Camera2D {
         render_target: Some(virtual_target.clone()),
+        zoom: vec2(2.0 / VIRTUAL_WIDTH, -2.0 / VIRTUAL_HEIGHT),
+        target: vec2(VIRTUAL_WIDTH * 0.5, VIRTUAL_HEIGHT * 0.5),
         ..Default::default()
     };
 
@@ -521,6 +523,8 @@ async fn main() {
                 ..Default::default()
             },
         );
+
+
 
         next_frame().await;
     }

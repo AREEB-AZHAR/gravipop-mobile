@@ -77,7 +77,7 @@ impl GameOverModal {
             };
             draw_rectangle(btn_x, btn1_y, btn_w, btn_h, btn_color);
             draw_rectangle_lines(btn_x, btn1_y, btn_w, btn_h, 1.5, WHITE);
-            draw_text("▶ WATCH AD: REWIND & REVIVE", btn_x + 35.0, btn1_y + 38.0, 20.0, WHITE);
+            draw_text("WATCH AD: REWIND & REVIVE", btn_x + 45.0, btn1_y + 38.0, 20.0, WHITE);
 
             if hovered && mouse_clicked {
                 action = GameOverAction::WatchAdRevive;
@@ -98,7 +98,7 @@ impl GameOverModal {
             };
             draw_rectangle(btn_x, btn2_y, btn_w, btn_h, btn_color);
             draw_rectangle_lines(btn_x, btn2_y, btn_w, btn_h, 1.5, WHITE);
-            draw_text("★ WATCH AD: 2X STARDUST", btn_x + 48.0, btn2_y + 38.0, 20.0, WHITE);
+            draw_text("WATCH AD: 2X STARDUST", btn_x + 55.0, btn2_y + 38.0, 20.0, WHITE);
 
             if hovered && mouse_clicked {
                 action = GameOverAction::WatchAdDoubleStardust;
@@ -115,7 +115,7 @@ impl GameOverModal {
         };
         draw_rectangle(btn_x, btn3_y, btn_w, btn_h, btn3_color);
         draw_rectangle_lines(btn_x, btn3_y, btn_w, btn_h, 1.5, WHITE);
-        draw_text("↺ PLAY AGAIN", btn_x + 115.0, btn3_y + 38.0, 22.0, WHITE);
+        draw_text("PLAY AGAIN", btn_x + 125.0, btn3_y + 38.0, 22.0, WHITE);
 
         if hovered3 && mouse_clicked {
             action = GameOverAction::Restart;
@@ -131,7 +131,7 @@ impl GameOverModal {
         };
         draw_rectangle(btn_x, btn4_y, btn_w, btn_h, btn4_color);
         draw_rectangle_lines(btn_x, btn4_y, btn_w, btn_h, 1.5, WHITE);
-        draw_text("✦ COSMIC OUTPOST (SHOP)", btn_x + 55.0, btn4_y + 38.0, 20.0, WHITE);
+        draw_text("COSMIC OUTPOST (SHOP)", btn_x + 65.0, btn4_y + 38.0, 20.0, WHITE);
 
         if hovered4 && mouse_clicked {
             action = GameOverAction::OpenShop;

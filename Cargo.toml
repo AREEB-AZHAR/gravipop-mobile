@@ -21,12 +21,9 @@ name = "gravipop-mobile"
 path = "src/main.rs"
 
 [package.metadata.android]
-package = "com.gravipop.celestialmerge"
-label = "GraviPop"
-version_code = 1
-version_name = "0.1.0"
 assets = "assets"
-build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
+target_sdk_version = 34
+min_sdk_version = 24
 
 [profile.release]
 opt-level = 3

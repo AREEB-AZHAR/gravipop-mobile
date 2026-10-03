@@ -20,8 +20,8 @@ use crate::ui::*;
 fn window_conf() -> Conf {
     Conf {
         window_title: "GraviPop: Celestial Merge".to_string(),
-        window_width: 480,
-        window_height: 854,
+        window_width: 450,
+        window_height: 800,
         window_resizable: true,
         high_dpi: true,
         ..Default::default()
@@ -42,6 +42,15 @@ async fn main() {
     let mut billing = MockBillingService::new(save_data.ads_removed, save_data.celestial_pass_unlocked);
     let catalog = EconomyCatalog::new();
 
+    // Virtual High-Resolution Render Target
+    let virtual_target = render_target(VIRTUAL_WIDTH as u32, VIRTUAL_HEIGHT as u32);
+    virtual_target.texture.set_filter(FilterMode::Linear);
+
+    let virtual_camera = Camera2D {
+        render_target: Some(virtual_target.clone()),
+        ..Default::default()
+    };
+
     // Game Session State
     let mut game_state = GameState::MainMenu;
     let mut bodies: Vec<CelestialBody> = Vec::new();
@@ -56,7 +65,7 @@ async fn main() {
     let mut shop_status_msg: Option<String> = None;
 
     // Slingshot launch bay state
-    let launch_pos = Vec2::new(VIRTUAL_WIDTH * 0.5, VIRTUAL_HEIGHT - 120.0);
+    let launch_pos = Vec2::new(VIRTUAL_WIDTH * 0.5, VIRTUAL_HEIGHT - 130.0);
     let mut queued_tier = CelestialTier::random_spawn_tier();
     let mut next_preview_tier = CelestialTier::random_spawn_tier();
     let mut is_dragging_sling = false;
@@ -65,7 +74,7 @@ async fn main() {
     loop {
         let dt = get_frame_time().min(0.05);
 
-        // 1. Calculate Virtual Viewport & Mouse Coordinate Mapping
+        // 1. Calculate Virtual Viewport & Pointer Coordinates
         let screen_w = screen_width();
         let screen_h = screen_height();
         let scale = (screen_w / VIRTUAL_WIDTH).min(screen_h / VIRTUAL_HEIGHT);
@@ -81,7 +90,7 @@ async fn main() {
         let mouse_down = is_mouse_button_down(MouseButton::Left);
         let mouse_released = is_mouse_button_released(MouseButton::Left);
 
-        // Handle Touch Screen Inputs (Multi-touch support on mobile)
+        // Touch Input Support (Mobile Native Touch Screen)
         let has_touch = !touches().is_empty();
         let active_touch_pos = if has_touch {
             let t = &touches()[0];
@@ -91,7 +100,7 @@ async fn main() {
         };
         let effective_pointer = active_touch_pos.unwrap_or(v_mouse);
 
-        // 2. Global Updates
+        // 2. Global Particle and Starfield Updates
         starfield.update(dt);
         particles.update(dt);
 
@@ -115,11 +124,10 @@ async fn main() {
         match game_state {
             GameState::MainMenu => {
                 if mouse_clicked {
-                    // Check if clicked "PLAY" button
+                    // Check PLAY Button
                     let play_btn_x = VIRTUAL_WIDTH * 0.5 - 130.0;
                     let play_btn_y = VIRTUAL_HEIGHT * 0.62;
                     if is_in_rect(effective_pointer, play_btn_x, play_btn_y, 260.0, 68.0) {
-                        // Start new run
                         bodies.clear();
                         current_score = 0;
                         run_stardust = 0;
@@ -131,7 +139,7 @@ async fn main() {
                         game_state = GameState::Playing;
                     }
 
-                    // Check if clicked "STORE" button
+                    // Check STORE Button
                     let store_btn_y = play_btn_y + 85.0;
                     if is_in_rect(effective_pointer, play_btn_x, store_btn_y, 260.0, 56.0) {
                         game_state = GameState::Shop;
@@ -140,7 +148,7 @@ async fn main() {
             }
 
             GameState::Playing => {
-                // Combo timer decay
+                // Combo decay
                 if combo_timer > 0.0 {
                     combo_timer -= dt;
                     if combo_timer <= 0.0 {
@@ -155,7 +163,7 @@ async fn main() {
                     b.update(dt);
                 }
 
-                // Collision Resolution & Fusion Detection
+                // Collisions and Fusions
                 let fusions = CollisionEngine::resolve_collisions(&mut bodies);
                 for f in fusions {
                     combo_count += 1;
@@ -166,14 +174,13 @@ async fn main() {
                     current_score += points;
                     run_stardust += f.stardust_awarded as u64;
 
-                    // Juice: Particle explosion & audio chime
                     particles.spawn_fusion_burst(f.pos, f.new_tier.primary_color(), f.new_tier as usize);
                     let label = if multiplier > 1 {
                         format!("+{} [x{} COMBO!]", points, multiplier)
                     } else {
                         format!("+{}", points)
                     };
-                    particles.add_floating_text(label, f.pos, f.new_tier.glow_color(), 22.0);
+                    particles.add_floating_text(label, f.pos, f.new_tier.glow_color(), 26.0);
                     audio.play_fusion_chime(combo_count);
                 }
 
@@ -182,7 +189,6 @@ async fn main() {
                 if has_outside {
                     critical_timer += dt;
                     if critical_timer >= CRITICAL_TIME_LIMIT {
-                        // Game Over: Singularity Collapsed!
                         audio.play_game_over();
                         save_data.runs_played += 1;
                         if current_score > save_data.high_score {
@@ -191,7 +197,6 @@ async fn main() {
                         save_data.stardust += run_stardust;
                         let _ = save_mgr.save(&save_data);
 
-                        // Trigger interstitial ad check (every 3 runs unless No-Ads is purchased)
                         if !billing.is_ad_removed() && save_data.runs_played % INTERSTITIAL_RUN_INTERVAL == 0 {
                             ads.start_interstitial_ad();
                             game_state = GameState::WatchingAd;
@@ -205,15 +210,13 @@ async fn main() {
 
                 // Slingshot Input Handling
                 if mouse_down || has_touch {
-                    let sling_radius = 80.0;
+                    let sling_radius = 85.0;
                     if !is_dragging_sling {
-                        // Check if initial press is near launch bay
                         if (effective_pointer - launch_pos).length() < sling_radius {
                             is_dragging_sling = true;
                             sling_drag_pos = effective_pointer;
                         }
                     } else {
-                        // Clamp drag vector to max tension
                         let pull = effective_pointer - launch_pos;
                         let dist = pull.length().min(160.0);
                         sling_drag_pos = launch_pos + pull.normalize_or_zero() * dist;
@@ -224,7 +227,6 @@ async fn main() {
                     is_dragging_sling = false;
                     let pull = launch_pos - sling_drag_pos;
                     if pull.length() > 20.0 {
-                        // Launch body into orbit!
                         let speed = (pull.length() * SLING_SENSITIVITY).min(MAX_SLING_SPEED);
                         let vel = pull.normalize() * speed;
 
@@ -243,7 +245,7 @@ async fn main() {
                     sling_drag_pos = launch_pos;
                 }
 
-                // Check Pause Button
+                // Pause Button
                 let pause_x = VIRTUAL_WIDTH - 65.0;
                 let pause_y = 20.0;
                 if mouse_clicked && is_in_rect(effective_pointer, pause_x, pause_y, 45.0, 45.0) {
@@ -253,13 +255,11 @@ async fn main() {
 
             GameState::Paused => {
                 if mouse_clicked {
-                    // Resume
                     let res_x = VIRTUAL_WIDTH * 0.5 - 110.0;
                     let res_y = VIRTUAL_HEIGHT * 0.45;
                     if is_in_rect(effective_pointer, res_x, res_y, 220.0, 56.0) {
                         game_state = GameState::Playing;
                     }
-                    // Quit to Hub
                     let quit_y = res_y + 75.0;
                     if is_in_rect(effective_pointer, res_x, quit_y, 220.0, 56.0) {
                         game_state = GameState::MainMenu;
@@ -267,50 +267,26 @@ async fn main() {
                 }
             }
 
-            GameState::GameOver => {
-                // Render game over modal and handle button clicks
-                // Handled in drawing section below
-            }
-
-            GameState::Shop => {
-                // Handled in drawing section below
-            }
-
-            GameState::WatchingAd => {
-                // Handled in drawing section below
-            }
+            GameState::GameOver => {}
+            GameState::Shop => {}
+            GameState::WatchingAd => {}
         }
 
         // =====================================================================
-        // 4. RENDERING PASS (Virtual Coordinate Space)
+        // 4. RENDER TO VIRTUAL BUFFER (720 x 1280 Crisp Virtual Coordinate Space)
         // =====================================================================
-        set_camera(&Camera2D {
-            target: vec2(VIRTUAL_WIDTH * 0.5, VIRTUAL_HEIGHT * 0.5),
-            zoom: vec2(2.0 / VIRTUAL_WIDTH, 2.0 / VIRTUAL_HEIGHT),
-            viewport: Some((
-                offset_x as i32,
-                offset_y as i32,
-                (VIRTUAL_WIDTH * scale) as i32,
-                (VIRTUAL_HEIGHT * scale) as i32,
-            )),
-            ..Default::default()
-        });
+        set_camera(&virtual_camera);
 
-        // Clear and draw space background
         let danger_ratio = (critical_timer / CRITICAL_TIME_LIMIT).clamp(0.0, 1.0);
         starfield.draw(gravity.center, danger_ratio);
 
-        // Draw In-Orbit Celestial Bodies
         for body in &bodies {
             BodyRenderer::draw_body(body);
         }
 
-        // Draw Particles & Floating Scores
         particles.draw();
 
-        // Draw Slingshot Launch Bay & Trajectory
         if game_state == GameState::Playing {
-            // Draw launch pad ring
             draw_circle_lines(launch_pos.x, launch_pos.y, 35.0, 2.0, Color::new(0.4, 0.6, 0.9, 0.4));
 
             if is_dragging_sling {
@@ -324,7 +300,6 @@ async fn main() {
                 BodyRenderer::draw_body(&launch_body);
             }
 
-            // Draw HUD
             Hud::draw(
                 current_score,
                 save_data.high_score,
@@ -340,17 +315,15 @@ async fn main() {
         match game_state {
             GameState::Playing => {}
             GameState::MainMenu => {
-                // Cosmic Title Logo
                 let title_y = VIRTUAL_HEIGHT * 0.28;
                 draw_text("GRAVIPOP", VIRTUAL_WIDTH * 0.5 - 165.0, title_y, 62.0, WHITE);
                 draw_text("CELESTIAL MERGE", VIRTUAL_WIDTH * 0.5 - 145.0, title_y + 40.0, 26.0, Color::new(0.4, 0.85, 1.0, 0.9));
 
-                // High score badge
                 let best_txt = format!("HIGH SCORE: {}", save_data.high_score);
-                draw_text(&best_txt, VIRTUAL_WIDTH * 0.5 - 105.0, title_y + 90.0, 20.0, Color::new(0.95, 0.8, 0.3, 1.0));
+                draw_text(&best_txt, VIRTUAL_WIDTH * 0.5 - 105.0, title_y + 90.0, 22.0, Color::new(0.95, 0.8, 0.3, 1.0));
 
                 let dust_txt = format!("✦ STARDUST: {}", save_data.stardust);
-                draw_text(&dust_txt, VIRTUAL_WIDTH * 0.5 - 85.0, title_y + 120.0, 20.0, Color::new(0.4, 0.9, 1.0, 1.0));
+                draw_text(&dust_txt, VIRTUAL_WIDTH * 0.5 - 85.0, title_y + 120.0, 22.0, Color::new(0.4, 0.9, 1.0, 1.0));
 
                 // Play Button
                 let play_x = VIRTUAL_WIDTH * 0.5 - 130.0;
@@ -365,19 +338,18 @@ async fn main() {
                 let store_hover = is_in_rect(effective_pointer, play_x, store_y, 260.0, 56.0);
                 draw_rectangle(play_x, store_y, 260.0, 56.0, if store_hover { Color::new(0.5, 0.3, 0.8, 1.0) } else { Color::new(0.38, 0.22, 0.65, 1.0) });
                 draw_rectangle_lines(play_x, store_y, 260.0, 56.0, 1.5, WHITE);
-                draw_text("✦ COSMIC SHOP", play_x + 48.0, store_y + 36.0, 20.0, WHITE);
+                draw_text("✦ COSMIC SHOP", play_x + 48.0, store_y + 36.0, 22.0, WHITE);
 
-                // Ads status footer
                 if billing.is_ad_removed() {
-                    draw_text("✓ PREMIUM AD-FREE EDITION", VIRTUAL_WIDTH * 0.5 - 120.0, VIRTUAL_HEIGHT - 60.0, 16.0, Color::new(0.4, 1.0, 0.6, 0.9));
+                    draw_text("✓ PREMIUM AD-FREE EDITION", VIRTUAL_WIDTH * 0.5 - 120.0, VIRTUAL_HEIGHT - 60.0, 18.0, Color::new(0.4, 1.0, 0.6, 0.9));
                 } else {
-                    draw_text("Tap Store to Remove Ads & Support Dev", VIRTUAL_WIDTH * 0.5 - 150.0, VIRTUAL_HEIGHT - 60.0, 15.0, Color::new(0.7, 0.7, 0.8, 0.6));
+                    draw_text("Tap Store to Remove Ads & Support Dev", VIRTUAL_WIDTH * 0.5 - 150.0, VIRTUAL_HEIGHT - 60.0, 16.0, Color::new(0.7, 0.7, 0.8, 0.6));
                 }
             }
 
             GameState::Paused => {
                 draw_rectangle(0.0, 0.0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, Color::new(0.0, 0.0, 0.0, 0.7));
-                draw_text("GAME PAUSED", VIRTUAL_WIDTH * 0.5 - 120.0, VIRTUAL_HEIGHT * 0.38, 34.0, WHITE);
+                draw_text("GAME PAUSED", VIRTUAL_WIDTH * 0.5 - 120.0, VIRTUAL_HEIGHT * 0.38, 36.0, WHITE);
 
                 let res_x = VIRTUAL_WIDTH * 0.5 - 110.0;
                 let res_y = VIRTUAL_HEIGHT * 0.45;
@@ -386,7 +358,7 @@ async fn main() {
 
                 let quit_y = res_y + 75.0;
                 draw_rectangle(res_x, quit_y, 220.0, 56.0, Color::new(0.7, 0.25, 0.25, 1.0));
-                draw_text("MAIN MENU", res_x + 50.0, quit_y + 36.0, 20.0, WHITE);
+                draw_text("MAIN MENU", res_x + 50.0, quit_y + 36.0, 22.0, WHITE);
             }
 
             GameState::GameOver => {
@@ -442,7 +414,6 @@ async fn main() {
                 match action {
                     ShopAction::BuyItem(sku) => {
                         if sku.contains("removeads") || sku.contains("starpass") || sku.starts_with("com.gravipop.stardust") {
-                            // Real IAP
                             match billing.purchase_product(&sku) {
                                 Ok(msg) => {
                                     shop_status_msg = Some(msg);
@@ -464,7 +435,6 @@ async fn main() {
                                 }
                             }
                         } else {
-                            // In-game Stardust skin purchase
                             if let Some(item) = catalog.skin_items.iter().find(|i| i.id == sku) {
                                 if save_data.stardust >= item.stardust_price && !save_data.unlocked_skins.contains(&sku) {
                                     save_data.stardust -= item.stardust_price;
@@ -534,16 +504,23 @@ async fn main() {
             }
         }
 
-        // Letterbox / Pillarbox Borders
+        // =====================================================================
+        // 5. DRAW VIRTUAL BUFFER TO PHYSICAL SCREEN (Auto-Scaled & Letterboxed)
+        // =====================================================================
         set_default_camera();
-        if offset_x > 0.0 {
-            draw_rectangle(0.0, 0.0, offset_x, screen_h, BLACK);
-            draw_rectangle(screen_w - offset_x, 0.0, offset_x, screen_h, BLACK);
-        }
-        if offset_y > 0.0 {
-            draw_rectangle(0.0, 0.0, screen_w, offset_y, BLACK);
-            draw_rectangle(0.0, screen_h - offset_y, screen_w, offset_y, BLACK);
-        }
+        clear_background(Color::new(0.02, 0.02, 0.06, 1.0));
+
+        draw_texture_ex(
+            &virtual_target.texture,
+            offset_x,
+            offset_y,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(VIRTUAL_WIDTH * scale, VIRTUAL_HEIGHT * scale)),
+                flip_y: true, // Corrects OpenGL texture memory orientation
+                ..Default::default()
+            },
+        );
 
         next_frame().await;
     }
@@ -565,7 +542,6 @@ fn handle_reward(
         RewardType::EventHorizonRevive => {
             *revives_used += 1;
             *critical_timer = 0.0;
-            // Vaporize the outermost 40% of bodies to give player breathing room!
             bodies.sort_by(|a, b| b.pos.y.partial_cmp(&a.pos.y).unwrap_or(std::cmp::Ordering::Equal));
             let remove_count = (bodies.len() / 3).max(1);
             bodies.truncate(bodies.len().saturating_sub(remove_count));
@@ -573,7 +549,7 @@ fn handle_reward(
         }
         RewardType::DoubleStardust => {
             *stardust_doubled = true;
-            save_data.stardust += *run_stardust; // Double stardust grant
+            save_data.stardust += *run_stardust;
             *run_stardust *= 2;
             let _ = save_mgr.save(save_data);
             *game_state = GameState::GameOver;

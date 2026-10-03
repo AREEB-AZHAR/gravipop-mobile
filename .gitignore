@@ -12,3 +12,6 @@ android/app/build/
 android/.idea/
 android/*.iml
 android/app/*.iml
+local.properties
+android/local.properties
+gravipop_save.json

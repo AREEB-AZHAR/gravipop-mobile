@@ -1,0 +1,14 @@
+/target
+**/*.rs.bk
+Cargo.lock
+*.apk
+*.aab
+.DS_Store
+Thumbs.db
+.gradle/
+**/build/
+android/.gradle/
+android/app/build/
+android/.idea/
+android/*.iml
+android/app/*.iml

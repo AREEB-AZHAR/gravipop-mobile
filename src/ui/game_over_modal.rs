@@ -12,7 +12,21 @@ pub enum GameOverAction {
 
 pub struct GameOverModal;
 
+fn dtx(text: &str, x: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
+    draw_text_ex(text, x, y, TextParams { font, font_size: sz as u16, color: col, ..Default::default() });
+}
+
+fn dcx(text: &str, cx: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
+    let dim = measure_text(text, font, sz as u16, 1.0);
+    draw_text_ex(text, cx - dim.width * 0.5, y, TextParams { font, font_size: sz as u16, color: col, ..Default::default() });
+}
+
+fn inside(p: Vec2, x: f32, y: f32, w: f32, h: f32) -> bool {
+    p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h
+}
+
 impl GameOverModal {
+    #[allow(clippy::too_many_arguments)]
     pub fn draw(
         score: u64,
         high_score: u64,
@@ -21,126 +35,99 @@ impl GameOverModal {
         stardust_doubled: bool,
         mouse_pos: Vec2,
         mouse_clicked: bool,
+        font: Option<&Font>,
     ) -> GameOverAction {
         let mut action = GameOverAction::None;
+        let cx = VIRTUAL_WIDTH * 0.5;
 
-        // Dark dim backdrop
-        draw_rectangle(0.0, 0.0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, Color::new(0.0, 0.0, 0.0, 0.75));
+        // Dim backdrop
+        draw_rectangle(0.0, 0.0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, Color::new(0.0, 0.0, 0.0, 0.80));
 
-        // Center Glassmorphic Card
-        let card_w = VIRTUAL_WIDTH - 60.0;
-        let card_h = 580.0;
-        let card_x = 30.0;
-        let card_y = (VIRTUAL_HEIGHT - card_h) * 0.5 - 20.0;
-
-        draw_rectangle(card_x, card_y, card_w, card_h, Color::new(0.08, 0.07, 0.16, 0.95));
-        draw_rectangle_lines(card_x, card_y, card_w, card_h, 2.0, Color::new(0.85, 0.35, 1.0, 0.65));
+        // Card
+        let cw = VIRTUAL_WIDTH - 48.0;
+        let ch = 620.0;
+        let cx2 = 24.0;
+        let cy = (VIRTUAL_HEIGHT - ch) * 0.5 - 10.0;
+        draw_rectangle(cx2, cy, cw, ch, Color::new(0.07, 0.06, 0.16, 0.97));
+        draw_rectangle_lines(cx2, cy, cw, ch, 2.0, Color::new(0.85, 0.35, 1.0, 0.70));
 
         // Title
-        draw_text("SINGULARITY COLLAPSED", card_x + 35.0, card_y + 55.0, 28.0, Color::new(1.0, 0.35, 0.45, 1.0));
+        dcx("SINGULARITY COLLAPSED", cx, cy + 60.0, 32.0, Color::new(1.0, 0.35, 0.45, 1.0), font);
 
-        // Run Statistics Plaque
-        let plaque_y = card_y + 85.0;
-        draw_rectangle(card_x + 20.0, plaque_y, card_w - 40.0, 140.0, Color::new(0.12, 0.10, 0.22, 0.8));
-        draw_rectangle_lines(card_x + 20.0, plaque_y, card_w - 40.0, 140.0, 1.0, Color::new(0.4, 0.35, 0.6, 0.4));
+        // Stats plaque
+        let py = cy + 85.0;
+        draw_rectangle(cx2 + 16.0, py, cw - 32.0, 150.0, Color::new(0.12, 0.10, 0.22, 0.85));
+        draw_rectangle_lines(cx2 + 16.0, py, cw - 32.0, 150.0, 1.0, Color::new(0.40, 0.35, 0.60, 0.45));
 
-        draw_text("FINAL SCORE", card_x + 40.0, plaque_y + 35.0, 18.0, Color::new(0.7, 0.75, 0.9, 0.8));
-        let score_txt = format!("{}", score);
-        draw_text(&score_txt, card_x + 40.0, plaque_y + 70.0, 36.0, WHITE);
+        dtx("FINAL SCORE", cx2 + 36.0, py + 40.0, 20.0, Color::new(0.70, 0.75, 0.90, 0.85), font);
+        let sc = score.to_string();
+        dtx(&sc, cx2 + 36.0, py + 90.0, 52.0, WHITE, font);
 
         if score >= high_score && score > 0 {
-            draw_text("★ NEW HIGH SCORE! ★", card_x + 40.0, plaque_y + 98.0, 16.0, Color::new(1.0, 0.85, 0.2, 1.0));
+            dtx("NEW HIGH SCORE!", cx2 + 36.0, py + 125.0, 20.0, Color::new(1.0, 0.88, 0.20, 1.0), font);
         } else {
-            let high_txt = format!("BEST: {}", high_score);
-            draw_text(&high_txt, card_x + 40.0, plaque_y + 98.0, 16.0, Color::new(0.7, 0.7, 0.8, 0.7));
+            let ht = format!("BEST  {}", high_score);
+            dtx(&ht, cx2 + 36.0, py + 125.0, 20.0, Color::new(0.70, 0.70, 0.82, 0.75), font);
         }
 
-        let dust_label = if stardust_doubled {
-            format!("STARDUST: +{} (DOUBLED!)", stardust_earned)
+        let dust_lbl = if stardust_doubled {
+            format!("STARDUST +{} (DOUBLED!)", stardust_earned)
         } else {
-            format!("STARDUST: +{}", stardust_earned)
+            format!("STARDUST +{}", stardust_earned)
         };
-        draw_text(&dust_label, card_x + 40.0, plaque_y + 125.0, 18.0, Color::new(0.4, 0.9, 1.0, 1.0));
+        dtx(&dust_lbl, cx2 + 36.0, py + 148.0, 22.0, Color::new(0.42, 0.90, 1.0, 1.0), font);
 
-        // Button 1: Rewarded Ad Revive
-        let btn1_y = card_y + 245.0;
-        let btn_h = 58.0;
-        let btn_w = card_w - 40.0;
-        let btn_x = card_x + 20.0;
+        // Buttons
+        let bw = cw - 36.0;
+        let bx = cx2 + 18.0;
+        let btn_h = 64.0;
+        let mut by = cy + 260.0;
 
+        // Button 1: Revive via ad
         if revive_available {
-            let hovered = is_inside(mouse_pos, btn_x, btn1_y, btn_w, btn_h);
-            let btn_color = if hovered {
-                Color::new(0.3, 0.75, 0.45, 1.0)
-            } else {
-                Color::new(0.2, 0.6, 0.35, 1.0)
-            };
-            draw_rectangle(btn_x, btn1_y, btn_w, btn_h, btn_color);
-            draw_rectangle_lines(btn_x, btn1_y, btn_w, btn_h, 1.5, WHITE);
-            draw_text("WATCH AD: REWIND & REVIVE", btn_x + 45.0, btn1_y + 38.0, 20.0, WHITE);
-
-            if hovered && mouse_clicked {
-                action = GameOverAction::WatchAdRevive;
-            }
+            let hov = inside(mouse_pos, bx, by, bw, btn_h);
+            draw_rectangle(bx, by, bw, btn_h,
+                if hov { Color::new(0.30, 0.78, 0.46, 1.0) } else { Color::new(0.20, 0.62, 0.36, 1.0) });
+            draw_rectangle_lines(bx, by, bw, btn_h, 1.8, WHITE);
+            dcx("WATCH AD  REWIND & REVIVE", cx, by + 42.0, 24.0, WHITE, font);
+            if hov && mouse_clicked { action = GameOverAction::WatchAdRevive; }
         } else {
-            draw_rectangle(btn_x, btn1_y, btn_w, btn_h, Color::new(0.2, 0.2, 0.25, 0.5));
-            draw_text("REVIVE ALREADY USED", btn_x + 65.0, btn1_y + 38.0, 18.0, Color::new(0.5, 0.5, 0.55, 1.0));
+            draw_rectangle(bx, by, bw, btn_h, Color::new(0.18, 0.18, 0.24, 0.55));
+            dcx("REVIVE USED", cx, by + 42.0, 22.0, Color::new(0.50, 0.50, 0.58, 1.0), font);
         }
+        by += btn_h + 14.0;
 
-        // Button 2: Rewarded Ad 2x Stardust
-        let btn2_y = card_y + 318.0;
+        // Button 2: Double stardust via ad
         if !stardust_doubled && stardust_earned > 0 {
-            let hovered = is_inside(mouse_pos, btn_x, btn2_y, btn_w, btn_h);
-            let btn_color = if hovered {
-                Color::new(0.85, 0.55, 0.15, 1.0)
-            } else {
-                Color::new(0.75, 0.45, 0.1, 1.0)
-            };
-            draw_rectangle(btn_x, btn2_y, btn_w, btn_h, btn_color);
-            draw_rectangle_lines(btn_x, btn2_y, btn_w, btn_h, 1.5, WHITE);
-            draw_text("WATCH AD: 2X STARDUST", btn_x + 55.0, btn2_y + 38.0, 20.0, WHITE);
-
-            if hovered && mouse_clicked {
-                action = GameOverAction::WatchAdDoubleStardust;
-            }
-        }
-
-        // Button 3: Retry
-        let btn3_y = card_y + 395.0;
-        let hovered3 = is_inside(mouse_pos, btn_x, btn3_y, btn_w, btn_h);
-        let btn3_color = if hovered3 {
-            Color::new(0.3, 0.45, 0.85, 1.0)
+            let hov = inside(mouse_pos, bx, by, bw, btn_h);
+            draw_rectangle(bx, by, bw, btn_h,
+                if hov { Color::new(0.88, 0.58, 0.18, 1.0) } else { Color::new(0.72, 0.46, 0.10, 1.0) });
+            draw_rectangle_lines(bx, by, bw, btn_h, 1.8, WHITE);
+            dcx("WATCH AD  2X STARDUST", cx, by + 42.0, 24.0, WHITE, font);
+            if hov && mouse_clicked { action = GameOverAction::WatchAdDoubleStardust; }
         } else {
-            Color::new(0.2, 0.35, 0.7, 1.0)
-        };
-        draw_rectangle(btn_x, btn3_y, btn_w, btn_h, btn3_color);
-        draw_rectangle_lines(btn_x, btn3_y, btn_w, btn_h, 1.5, WHITE);
-        draw_text("PLAY AGAIN", btn_x + 125.0, btn3_y + 38.0, 22.0, WHITE);
-
-        if hovered3 && mouse_clicked {
-            action = GameOverAction::Restart;
+            draw_rectangle(bx, by, bw, btn_h, Color::new(0.18, 0.18, 0.24, 0.40));
+            dcx("STARDUST DOUBLED", cx, by + 42.0, 22.0, Color::new(0.50, 0.50, 0.58, 0.75), font);
         }
+        by += btn_h + 14.0;
+
+        // Button 3: Play again
+        let hov3 = inside(mouse_pos, bx, by, bw, btn_h);
+        draw_rectangle(bx, by, bw, btn_h,
+            if hov3 { Color::new(0.32, 0.48, 0.88, 1.0) } else { Color::new(0.22, 0.36, 0.72, 1.0) });
+        draw_rectangle_lines(bx, by, bw, btn_h, 1.8, WHITE);
+        dcx("PLAY AGAIN", cx, by + 42.0, 26.0, WHITE, font);
+        if hov3 && mouse_clicked { action = GameOverAction::Restart; }
+        by += btn_h + 14.0;
 
         // Button 4: Shop
-        let btn4_y = card_y + 470.0;
-        let hovered4 = is_inside(mouse_pos, btn_x, btn4_y, btn_w, btn_h);
-        let btn4_color = if hovered4 {
-            Color::new(0.6, 0.25, 0.75, 1.0)
-        } else {
-            Color::new(0.45, 0.18, 0.6, 1.0)
-        };
-        draw_rectangle(btn_x, btn4_y, btn_w, btn_h, btn4_color);
-        draw_rectangle_lines(btn_x, btn4_y, btn_w, btn_h, 1.5, WHITE);
-        draw_text("COSMIC OUTPOST (SHOP)", btn_x + 65.0, btn4_y + 38.0, 20.0, WHITE);
-
-        if hovered4 && mouse_clicked {
-            action = GameOverAction::OpenShop;
-        }
+        let hov4 = inside(mouse_pos, bx, by, bw, btn_h);
+        draw_rectangle(bx, by, bw, btn_h,
+            if hov4 { Color::new(0.62, 0.28, 0.80, 1.0) } else { Color::new(0.46, 0.18, 0.62, 1.0) });
+        draw_rectangle_lines(bx, by, bw, btn_h, 1.8, WHITE);
+        dcx("COSMIC SHOP", cx, by + 42.0, 26.0, WHITE, font);
+        if hov4 && mouse_clicked { action = GameOverAction::OpenShop; }
 
         action
     }
-}
-
-fn is_inside(pos: Vec2, x: f32, y: f32, w: f32, h: f32) -> bool {
-    pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h
 }

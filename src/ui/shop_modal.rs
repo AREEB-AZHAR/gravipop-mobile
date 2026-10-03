@@ -12,7 +12,21 @@ pub enum ShopAction {
 
 pub struct ShopModal;
 
+fn dtx(text: &str, x: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
+    draw_text_ex(text, x, y, TextParams { font, font_size: sz as u16, color: col, ..Default::default() });
+}
+
+fn dcx(text: &str, cx: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
+    let dim = measure_text(text, font, sz as u16, 1.0);
+    draw_text_ex(text, cx - dim.width * 0.5, y, TextParams { font, font_size: sz as u16, color: col, ..Default::default() });
+}
+
+fn inside(p: Vec2, x: f32, y: f32, w: f32, h: f32) -> bool {
+    p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h
+}
+
 impl ShopModal {
+    #[allow(clippy::too_many_arguments)]
     pub fn draw(
         catalog: &EconomyCatalog,
         stardust: u64,
@@ -22,142 +36,128 @@ impl ShopModal {
         status_message: Option<&str>,
         mouse_pos: Vec2,
         mouse_clicked: bool,
+        font: Option<&Font>,
     ) -> ShopAction {
         let mut action = ShopAction::None;
+        let cx = VIRTUAL_WIDTH * 0.5;
 
-        // Dark dim backdrop
-        draw_rectangle(0.0, 0.0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, Color::new(0.0, 0.0, 0.0, 0.85));
+        // Dim backdrop
+        draw_rectangle(0.0, 0.0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, Color::new(0.0, 0.0, 0.0, 0.88));
 
-        // Center Glassmorphic Card
-        let card_w = VIRTUAL_WIDTH - 40.0;
-        let card_h = VIRTUAL_HEIGHT - 120.0;
-        let card_x = 20.0;
-        let card_y = 60.0;
+        // Full-screen card
+        let cw = VIRTUAL_WIDTH - 32.0;
+        let ch = VIRTUAL_HEIGHT - 100.0;
+        let card_x = 16.0;
+        let card_y = 50.0;
+        draw_rectangle(card_x, card_y, cw, ch, Color::new(0.06, 0.05, 0.14, 0.97));
+        draw_rectangle_lines(card_x, card_y, cw, ch, 2.0, Color::new(0.40, 0.80, 1.0, 0.65));
 
-        draw_rectangle(card_x, card_y, card_w, card_h, Color::new(0.06, 0.05, 0.14, 0.96));
-        draw_rectangle_lines(card_x, card_y, card_w, card_h, 2.0, Color::new(0.4, 0.8, 1.0, 0.65));
+        // Title bar
+        dcx("COSMIC STORE", cx, card_y + 48.0, 32.0, WHITE, font);
+        let dust_str = format!("STARDUST  {}", stardust);
+        dcx(&dust_str, cx, card_y + 80.0, 22.0, Color::new(0.42, 0.90, 1.0, 1.0), font);
 
-        // Title Bar
-        draw_text("COSMIC STORE", card_x + 30.0, card_y + 45.0, 28.0, WHITE);
-        let dust_label = format!("✦ {}", stardust);
-        draw_text(&dust_label, card_x + card_w - 180.0, card_y + 45.0, 24.0, Color::new(0.4, 0.9, 1.0, 1.0));
+        // Close button
+        let close_x = card_x + cw - 55.0;
+        let close_y = card_y + 12.0;
+        let close_hov = inside(mouse_pos, close_x, close_y, 44.0, 44.0);
+        draw_rectangle(
+            close_x, close_y, 44.0, 44.0,
+            if close_hov { Color::new(0.82, 0.22, 0.22, 0.90) } else { Color::new(0.32, 0.10, 0.10, 0.65) },
+        );
+        draw_rectangle_lines(close_x, close_y, 44.0, 44.0, 1.5, WHITE);
+        dcx("X", close_x + 22.0, close_y + 30.0, 24.0, WHITE, font);
+        if close_hov && mouse_clicked { action = ShopAction::Close; }
 
-        // Close Button (Top right X)
-        let close_btn_size = 40.0;
-        let close_btn_x = card_x + card_w - 50.0;
-        let close_btn_y = card_y + 15.0;
-        let close_hover = is_inside(mouse_pos, close_btn_x, close_btn_y, close_btn_size, close_btn_size);
-        draw_rectangle(close_btn_x, close_btn_y, close_btn_size, close_btn_size, if close_hover { Color::new(0.8, 0.2, 0.2, 0.8) } else { Color::new(0.3, 0.1, 0.1, 0.6) });
-        draw_rectangle_lines(close_btn_x, close_btn_y, close_btn_size, close_btn_size, 1.0, WHITE);
-        draw_text("X", close_btn_x + 14.0, close_btn_y + 28.0, 22.0, WHITE);
-        if close_hover && mouse_clicked {
-            action = ShopAction::Close;
-        }
-
-        // Optional status message
+        // Status message
         if let Some(msg) = status_message {
-            draw_text(msg, card_x + 30.0, card_y + 75.0, 18.0, Color::new(0.3, 1.0, 0.5, 1.0));
+            dcx(msg, cx, card_y + 108.0, 20.0, Color::new(0.30, 1.0, 0.50, 1.0), font);
         }
 
-        // SECTION 1: IN-APP PURCHASES
-        let mut cur_y = card_y + 105.0;
-        draw_text("IN-APP PURCHASES", card_x + 30.0, cur_y, 18.0, Color::new(0.9, 0.8, 0.3, 1.0));
-        cur_y += 18.0;
+        let mut cur_y = card_y + 128.0;
+
+        // ── IAP items ────────────────────────────────────────────────────────
+        dcx("IN-APP PURCHASES", cx, cur_y + 22.0, 20.0, Color::new(0.95, 0.82, 0.30, 1.0), font);
+        cur_y += 36.0;
 
         for item in &catalog.iap_items {
             let is_owned = item.id.contains("removeads") && ads_removed;
-            let item_h = 70.0;
-            let item_w = card_w - 40.0;
-            let item_x = card_x + 20.0;
+            let ih = 78.0;
+            let iw = cw - 32.0;
+            let ix = card_x + 16.0;
 
-            draw_rectangle(item_x, cur_y, item_w, item_h, Color::new(0.11, 0.09, 0.20, 0.8));
-            draw_rectangle_lines(item_x, cur_y, item_w, item_h, 1.0, Color::new(0.3, 0.4, 0.6, 0.4));
+            draw_rectangle(ix, cur_y, iw, ih, Color::new(0.11, 0.09, 0.20, 0.82));
+            draw_rectangle_lines(ix, cur_y, iw, ih, 1.0, Color::new(0.30, 0.40, 0.60, 0.45));
 
-            draw_text(&item.title, item_x + 15.0, cur_y + 28.0, 20.0, WHITE);
-            draw_text(&item.description, item_x + 15.0, cur_y + 52.0, 13.0, Color::new(0.7, 0.75, 0.85, 0.7));
+            dtx(&item.title, ix + 14.0, cur_y + 30.0, 22.0, WHITE, font);
+            dtx(&item.description, ix + 14.0, cur_y + 58.0, 16.0, Color::new(0.72, 0.76, 0.86, 0.75), font);
 
-            // Price / Buy Button
-            let btn_w = 110.0;
-            let btn_h = 42.0;
-            let btn_x = item_x + item_w - btn_w - 15.0;
-            let btn_y = cur_y + 14.0;
+            let bw2 = 120.0;
+            let bh = 46.0;
+            let bx2 = ix + iw - bw2 - 12.0;
+            let by2 = cur_y + 16.0;
 
             if is_owned {
-                draw_rectangle(btn_x, btn_y, btn_w, btn_h, Color::new(0.2, 0.4, 0.25, 0.6));
-                draw_text("ACTIVE", btn_x + 22.0, btn_y + 27.0, 16.0, Color::new(0.5, 0.9, 0.6, 1.0));
+                draw_rectangle(bx2, by2, bw2, bh, Color::new(0.18, 0.40, 0.24, 0.65));
+                dcx("ACTIVE", bx2 + bw2 * 0.5, by2 + 30.0, 18.0, Color::new(0.5, 0.95, 0.62, 1.0), font);
             } else {
-                let btn_hover = is_inside(mouse_pos, btn_x, btn_y, btn_w, btn_h);
-                let col = if btn_hover { Color::new(0.25, 0.75, 0.4, 1.0) } else { Color::new(0.18, 0.58, 0.3, 1.0) };
-                draw_rectangle(btn_x, btn_y, btn_w, btn_h, col);
-                draw_rectangle_lines(btn_x, btn_y, btn_w, btn_h, 1.0, WHITE);
-                draw_text(&item.price_display, btn_x + 28.0, btn_y + 27.0, 18.0, WHITE);
-
-                if btn_hover && mouse_clicked {
-                    action = ShopAction::BuyItem(item.id.clone());
-                }
+                let hov = inside(mouse_pos, bx2, by2, bw2, bh);
+                draw_rectangle(bx2, by2, bw2, bh,
+                    if hov { Color::new(0.28, 0.80, 0.44, 1.0) } else { Color::new(0.18, 0.62, 0.32, 1.0) });
+                draw_rectangle_lines(bx2, by2, bw2, bh, 1.2, WHITE);
+                dcx(&item.price_display, bx2 + bw2 * 0.5, by2 + 30.0, 20.0, WHITE, font);
+                if hov && mouse_clicked { action = ShopAction::BuyItem(item.id.clone()); }
             }
-
-            cur_y += item_h + 12.0;
+            cur_y += ih + 10.0;
         }
 
-        // SECTION 2: COSMETIC THEMES
-        cur_y += 20.0;
-        draw_text("COSMETIC CELESTIAL THEMES", card_x + 30.0, cur_y, 18.0, Color::new(0.4, 0.9, 1.0, 1.0));
-        cur_y += 18.0;
+        // ── Cosmetic skins ────────────────────────────────────────────────────
+        cur_y += 10.0;
+        dcx("COSMETIC THEMES", cx, cur_y + 22.0, 20.0, Color::new(0.42, 0.90, 1.0, 1.0), font);
+        cur_y += 36.0;
 
         for item in &catalog.skin_items {
             let is_unlocked = unlocked_skins.contains(&item.id);
             let is_equipped = equipped_skin == item.id;
-            let item_h = 65.0;
-            let item_w = card_w - 40.0;
-            let item_x = card_x + 20.0;
+            let ih = 72.0;
+            let iw = cw - 32.0;
+            let ix = card_x + 16.0;
 
-            draw_rectangle(item_x, cur_y, item_w, item_h, Color::new(0.11, 0.09, 0.20, 0.8));
-            draw_rectangle_lines(item_x, cur_y, item_w, item_h, 1.0, Color::new(0.3, 0.4, 0.6, 0.4));
+            draw_rectangle(ix, cur_y, iw, ih, Color::new(0.11, 0.09, 0.20, 0.82));
+            draw_rectangle_lines(ix, cur_y, iw, ih, 1.0, Color::new(0.30, 0.40, 0.60, 0.45));
 
-            draw_text(&item.title, item_x + 15.0, cur_y + 26.0, 19.0, WHITE);
-            draw_text(&item.description, item_x + 15.0, cur_y + 48.0, 13.0, Color::new(0.7, 0.75, 0.85, 0.7));
+            dtx(&item.title, ix + 14.0, cur_y + 28.0, 21.0, WHITE, font);
+            dtx(&item.description, ix + 14.0, cur_y + 54.0, 16.0, Color::new(0.72, 0.76, 0.86, 0.75), font);
 
-            let btn_w = 110.0;
-            let btn_h = 38.0;
-            let btn_x = item_x + item_w - btn_w - 15.0;
-            let btn_y = cur_y + 13.0;
+            let bw2 = 120.0;
+            let bh = 44.0;
+            let bx2 = ix + iw - bw2 - 12.0;
+            let by2 = cur_y + 14.0;
 
             if is_equipped {
-                draw_rectangle(btn_x, btn_y, btn_w, btn_h, Color::new(0.2, 0.5, 0.7, 0.7));
-                draw_text("EQUIPPED", btn_x + 12.0, btn_y + 25.0, 16.0, WHITE);
+                draw_rectangle(bx2, by2, bw2, bh, Color::new(0.20, 0.50, 0.72, 0.75));
+                dcx("EQUIPPED", bx2 + bw2 * 0.5, by2 + 28.0, 18.0, WHITE, font);
             } else if is_unlocked {
-                let btn_hover = is_inside(mouse_pos, btn_x, btn_y, btn_w, btn_h);
-                draw_rectangle(btn_x, btn_y, btn_w, btn_h, if btn_hover { Color::new(0.35, 0.55, 0.85, 1.0) } else { Color::new(0.25, 0.45, 0.7, 1.0) });
-                draw_rectangle_lines(btn_x, btn_y, btn_w, btn_h, 1.0, WHITE);
-                draw_text("EQUIP", btn_x + 28.0, btn_y + 25.0, 16.0, WHITE);
-                if btn_hover && mouse_clicked {
-                    action = ShopAction::EquipSkin(item.id.clone());
-                }
+                let hov = inside(mouse_pos, bx2, by2, bw2, bh);
+                draw_rectangle(bx2, by2, bw2, bh,
+                    if hov { Color::new(0.36, 0.58, 0.90, 1.0) } else { Color::new(0.26, 0.46, 0.74, 1.0) });
+                draw_rectangle_lines(bx2, by2, bw2, bh, 1.2, WHITE);
+                dcx("EQUIP", bx2 + bw2 * 0.5, by2 + 28.0, 18.0, WHITE, font);
+                if hov && mouse_clicked { action = ShopAction::EquipSkin(item.id.clone()); }
             } else {
-                let can_afford = stardust >= item.stardust_price;
-                let btn_hover = is_inside(mouse_pos, btn_x, btn_y, btn_w, btn_h);
-                let col = if can_afford {
-                    if btn_hover { Color::new(0.85, 0.6, 0.2, 1.0) } else { Color::new(0.75, 0.5, 0.15, 1.0) }
-                } else {
-                    Color::new(0.3, 0.3, 0.35, 0.6)
-                };
-                draw_rectangle(btn_x, btn_y, btn_w, btn_h, col);
-                draw_rectangle_lines(btn_x, btn_y, btn_w, btn_h, 1.0, WHITE);
-                draw_text(&item.price_display, btn_x + 12.0, btn_y + 25.0, 14.0, WHITE);
-
-                if can_afford && btn_hover && mouse_clicked {
-                    action = ShopAction::BuyItem(item.id.clone());
-                }
+                let can = stardust >= item.stardust_price;
+                let hov = inside(mouse_pos, bx2, by2, bw2, bh);
+                draw_rectangle(bx2, by2, bw2, bh,
+                    if can && hov { Color::new(0.88, 0.62, 0.22, 1.0) }
+                    else if can   { Color::new(0.76, 0.50, 0.15, 1.0) }
+                    else          { Color::new(0.28, 0.28, 0.34, 0.65) });
+                draw_rectangle_lines(bx2, by2, bw2, bh, 1.2, WHITE);
+                dcx(&item.price_display, bx2 + bw2 * 0.5, by2 + 28.0, 18.0, WHITE, font);
+                if can && hov && mouse_clicked { action = ShopAction::BuyItem(item.id.clone()); }
             }
-
-            cur_y += item_h + 10.0;
+            cur_y += ih + 8.0;
         }
 
         action
     }
-}
-
-fn is_inside(pos: Vec2, x: f32, y: f32, w: f32, h: f32) -> bool {
-    pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h
 }

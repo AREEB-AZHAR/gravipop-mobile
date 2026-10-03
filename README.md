@@ -5,8 +5,10 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.97%2B-orange.svg?logo=rust)](https://www.rust-lang.org/)
 [![Macroquad](https://img.shields.io/badge/Engine-Macroquad%200.4-blue.svg)](https://macroquad.rs/)
-[![Target](https://img.shields.io/badge/Platform-Android%20%7C%20Windows%20%7C%20Wasm-brightgreen.svg)]()
-[![License](https://img.shields.io/badge/License-MIT-purple.svg)]()
+[![APK](https://img.shields.io/badge/APK-8.03%20MB%20Ready-brightgreen.svg)]()
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Windows%20%7C%20Wasm-blue.svg)]()
+
+> 📱 **Ready-to-install Android APK**: The compiled release APK is ready in the repository root: [`gravipop-mobile.apk`](file:///C:/Users/areeb/Desktop/folders/gravipop-mobile/gravipop-mobile.apk) (Only **8.03 MB**)!
 
 ---
 

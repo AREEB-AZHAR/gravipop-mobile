@@ -67,9 +67,9 @@
 
 You do **not** need to assemble custom Gradle projects manually. GraviPop uses `cargo-quad-apk` for 1-step Android builds:
 
-### Prerequisites for Android
-- Android SDK installed (`platforms;android-34` and `build-tools;34.0.0`)
-- Android NDK installed (`ndk;28.2.x` or similar)
+### Prerequisites & Environment Setup
+- Android SDK: `C:\Users\areeb\AppData\Local\Android\Sdk`
+- Android NDK: `C:\Users\areeb\AppData\Local\Android\Sdk\ndk\28.2.13676358`
 - `cargo-quad-apk` installed:
   ```bash
   cargo install cargo-quad-apk
@@ -80,10 +80,19 @@ You do **not** need to assemble custom Gradle projects manually. GraviPop uses `
   ```
 
 ### The Exact Command to Build the APK
-Run this single command from the project root:
-```bash
+In your PowerShell terminal, set the NDK environment path and build:
+
+```powershell
+$env:NDK_HOME = "C:\Users\areeb\AppData\Local\Android\Sdk\ndk\28.2.13676358"
+$env:ANDROID_HOME = "C:\Users\areeb\AppData\Local\Android\Sdk"
 cargo quad-apk build --release
 ```
+
+> **Tip (Permanent Setup)**: To set it once permanently so you never have to type `$env:NDK_HOME` again:
+> ```powershell
+> [Environment]::SetEnvironmentVariable("NDK_HOME", "C:\Users\areeb\AppData\Local\Android\Sdk\ndk\28.2.13676358", "User")
+> [Environment]::SetEnvironmentVariable("ANDROID_HOME", "C:\Users\areeb\AppData\Local\Android\Sdk", "User")
+> ```
 
 The resulting signed APK will be generated at:
 ```text

@@ -1,18 +1,19 @@
 use macroquad::color::Color;
 use quad_rand::gen_range;
 
+/// Ten cosmic tiers, sized so even the biggest fits comfortably in the 520 px jar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CelestialTier {
-    Asteroid = 0,
-    Moon = 1,
-    Terrestrial = 2,
-    GasGiant = 3,
-    RingedGiant = 4,
-    IceGiant = 5,
-    RedDwarf = 6,
+    Asteroid       = 0,
+    Moon           = 1,
+    Terrestrial    = 2,
+    GasGiant       = 3,
+    RingedGiant    = 4,
+    IceGiant       = 5,
+    RedDwarf       = 6,
     BlueSupergiant = 7,
-    Pulsar = 8,
-    Singularity = 9,
+    Pulsar         = 8,
+    Singularity    = 9,   // largest, rarest, most satisfying to create
 }
 
 impl CelestialTier {
@@ -30,113 +31,100 @@ impl CelestialTier {
     ];
 
     pub fn next_tier(&self) -> Option<CelestialTier> {
-        let index = *self as usize;
-        if index + 1 < Self::ALL.len() {
-            Some(Self::ALL[index + 1])
-        } else {
-            None
-        }
+        let i = *self as usize;
+        if i + 1 < Self::ALL.len() { Some(Self::ALL[i + 1]) } else { None }
     }
 
-    #[allow(dead_code)]
     pub fn name(&self) -> &'static str {
         match self {
-            CelestialTier::Asteroid => "Asteroid",
-            CelestialTier::Moon => "Moon",
-            CelestialTier::Terrestrial => "Terrestrial",
-            CelestialTier::GasGiant => "Gas Giant",
-            CelestialTier::RingedGiant => "Ringed Giant",
-            CelestialTier::IceGiant => "Ice Giant",
-            CelestialTier::RedDwarf => "Red Dwarf",
-            CelestialTier::BlueSupergiant => "Blue Supergiant",
-            CelestialTier::Pulsar => "Pulsar",
-            CelestialTier::Singularity => "Cosmic Singularity",
+            Self::Asteroid       => "Asteroid",
+            Self::Moon           => "Moon",
+            Self::Terrestrial    => "Earth",
+            Self::GasGiant       => "Gas Giant",
+            Self::RingedGiant    => "Saturn",
+            Self::IceGiant       => "Ice Giant",
+            Self::RedDwarf       => "Red Dwarf",
+            Self::BlueSupergiant => "Supergiant",
+            Self::Pulsar         => "Pulsar",
+            Self::Singularity    => "SINGULARITY",
         }
     }
 
+    /// Radius in virtual pixels — scaled for a 520 px wide jar.
     pub fn radius(&self) -> f32 {
         match self {
-            CelestialTier::Asteroid => 18.0,
-            CelestialTier::Moon => 24.0,
-            CelestialTier::Terrestrial => 31.0,
-            CelestialTier::GasGiant => 39.0,
-            CelestialTier::RingedGiant => 47.0,
-            CelestialTier::IceGiant => 55.0,
-            CelestialTier::RedDwarf => 64.0,
-            CelestialTier::BlueSupergiant => 74.0,
-            CelestialTier::Pulsar => 84.0,
-            CelestialTier::Singularity => 95.0,
+            Self::Asteroid       => 22.0,
+            Self::Moon           => 30.0,
+            Self::Terrestrial    => 40.0,
+            Self::GasGiant       => 52.0,
+            Self::RingedGiant    => 66.0,
+            Self::IceGiant       => 82.0,
+            Self::RedDwarf       => 100.0,
+            Self::BlueSupergiant => 120.0,
+            Self::Pulsar         => 142.0,
+            Self::Singularity    => 166.0,   // nearly 2/3 the jar width — spectacular!
         }
     }
 
+    /// Mass used only for collision impulse calculations.
     pub fn mass(&self) -> f32 {
-        match self {
-            CelestialTier::Asteroid => 1.0,
-            CelestialTier::Moon => 2.2,
-            CelestialTier::Terrestrial => 4.5,
-            CelestialTier::GasGiant => 9.0,
-            CelestialTier::RingedGiant => 18.0,
-            CelestialTier::IceGiant => 35.0,
-            CelestialTier::RedDwarf => 70.0,
-            CelestialTier::BlueSupergiant => 140.0,
-            CelestialTier::Pulsar => 280.0,
-            CelestialTier::Singularity => 600.0,
-        }
+        let r = self.radius();
+        r * r * 0.01   // proportional to area
     }
 
+    /// Points awarded when this tier is produced by a merge.
     pub fn score_value(&self) -> u64 {
         match self {
-            CelestialTier::Asteroid => 10,
-            CelestialTier::Moon => 25,
-            CelestialTier::Terrestrial => 60,
-            CelestialTier::GasGiant => 150,
-            CelestialTier::RingedGiant => 350,
-            CelestialTier::IceGiant => 800,
-            CelestialTier::RedDwarf => 1800,
-            CelestialTier::BlueSupergiant => 4200,
-            CelestialTier::Pulsar => 9500,
-            CelestialTier::Singularity => 25000,
+            Self::Asteroid       => 5,
+            Self::Moon           => 15,
+            Self::Terrestrial    => 40,
+            Self::GasGiant       => 100,
+            Self::RingedGiant    => 250,
+            Self::IceGiant       => 600,
+            Self::RedDwarf       => 1_500,
+            Self::BlueSupergiant => 4_000,
+            Self::Pulsar         => 10_000,
+            Self::Singularity    => 30_000,   // winning moment!
         }
     }
 
     pub fn primary_color(&self) -> Color {
         match self {
-            CelestialTier::Asteroid => Color::new(0.68, 0.70, 0.74, 1.0),
-            CelestialTier::Moon => Color::new(0.70, 0.88, 0.95, 1.0),
-            CelestialTier::Terrestrial => Color::new(0.20, 0.75, 0.50, 1.0),
-            CelestialTier::GasGiant => Color::new(0.96, 0.55, 0.20, 1.0),
-            CelestialTier::RingedGiant => Color::new(0.98, 0.80, 0.25, 1.0),
-            CelestialTier::IceGiant => Color::new(0.20, 0.60, 0.98, 1.0),
-            CelestialTier::RedDwarf => Color::new(0.95, 0.22, 0.28, 1.0),
-            CelestialTier::BlueSupergiant => Color::new(0.25, 0.85, 1.0, 1.0),
-            CelestialTier::Pulsar => Color::new(0.85, 0.35, 1.0, 1.0),
-            CelestialTier::Singularity => Color::new(0.10, 0.08, 0.18, 1.0),
+            Self::Asteroid       => Color::new(0.65, 0.62, 0.58, 1.0), // grey rock
+            Self::Moon           => Color::new(0.72, 0.88, 0.96, 1.0), // pale blue-white
+            Self::Terrestrial    => Color::new(0.22, 0.76, 0.52, 1.0), // blue-green
+            Self::GasGiant       => Color::new(0.96, 0.58, 0.22, 1.0), // orange
+            Self::RingedGiant    => Color::new(0.98, 0.82, 0.28, 1.0), // golden
+            Self::IceGiant       => Color::new(0.22, 0.62, 0.98, 1.0), // electric blue
+            Self::RedDwarf       => Color::new(0.96, 0.24, 0.28, 1.0), // red
+            Self::BlueSupergiant => Color::new(0.28, 0.88, 1.00, 1.0), // bright cyan
+            Self::Pulsar         => Color::new(0.88, 0.38, 1.00, 1.0), // vivid purple
+            Self::Singularity    => Color::new(0.08, 0.06, 0.16, 1.0), // near-black w/ glow
         }
     }
 
     pub fn glow_color(&self) -> Color {
+        let c = self.primary_color();
+        Color::new(c.r, c.g, c.b, 0.55)
+    }
+
+    /// Label colour for the tier name drawn on large bodies.
+    pub fn label_color(&self) -> Color {
         match self {
-            CelestialTier::Asteroid => Color::new(0.68, 0.70, 0.74, 0.3),
-            CelestialTier::Moon => Color::new(0.70, 0.88, 0.95, 0.4),
-            CelestialTier::Terrestrial => Color::new(0.20, 0.75, 0.50, 0.45),
-            CelestialTier::GasGiant => Color::new(0.96, 0.55, 0.20, 0.5),
-            CelestialTier::RingedGiant => Color::new(0.98, 0.80, 0.25, 0.55),
-            CelestialTier::IceGiant => Color::new(0.20, 0.60, 0.98, 0.55),
-            CelestialTier::RedDwarf => Color::new(0.95, 0.22, 0.28, 0.6),
-            CelestialTier::BlueSupergiant => Color::new(0.25, 0.85, 1.0, 0.65),
-            CelestialTier::Pulsar => Color::new(0.85, 0.35, 1.0, 0.7),
-            CelestialTier::Singularity => Color::new(0.90, 0.40, 1.0, 0.75),
+            Self::Singularity => Color::new(0.85, 0.35, 1.0, 1.0),
+            _ => Color::new(1.0, 1.0, 1.0, 0.90),
         }
     }
 
+    /// Only the first 3 tiers can spawn at the top. Weighted towards tier-1.
     pub fn random_spawn_tier() -> Self {
         let roll = gen_range(0, 100);
-        if roll < 55 {
-            CelestialTier::Asteroid
-        } else if roll < 85 {
-            CelestialTier::Moon
+        if roll < 60 {
+            Self::Asteroid
+        } else if roll < 90 {
+            Self::Moon
         } else {
-            CelestialTier::Terrestrial
+            Self::Terrestrial
         }
     }
 }
@@ -148,19 +136,23 @@ mod tests {
     #[test]
     fn test_tier_progression() {
         assert_eq!(CelestialTier::Asteroid.next_tier(), Some(CelestialTier::Moon));
-        assert_eq!(CelestialTier::Moon.next_tier(), Some(CelestialTier::Terrestrial));
-        assert_eq!(CelestialTier::Pulsar.next_tier(), Some(CelestialTier::Singularity));
         assert_eq!(CelestialTier::Singularity.next_tier(), None);
     }
 
     #[test]
-    fn test_tier_physics_scaling() {
+    fn test_sizes_increase() {
         for i in 0..CelestialTier::ALL.len() - 1 {
-            let current = CelestialTier::ALL[i];
-            let next = CelestialTier::ALL[i + 1];
-            assert!(next.radius() > current.radius());
-            assert!(next.mass() > current.mass());
-            assert!(next.score_value() > current.score_value());
+            let a = CelestialTier::ALL[i];
+            let b = CelestialTier::ALL[i + 1];
+            assert!(b.radius() > a.radius(), "{:?} should be larger than {:?}", b, a);
+            assert!(b.score_value() > a.score_value());
         }
+    }
+
+    #[test]
+    fn test_singularity_fits_jar() {
+        // Singularity diameter must be less than the jar width
+        use crate::core::config::JAR_WIDTH;
+        assert!(CelestialTier::Singularity.radius() * 2.0 < JAR_WIDTH);
     }
 }

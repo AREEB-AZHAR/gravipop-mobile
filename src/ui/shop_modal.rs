@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
 use crate::core::config::{VIRTUAL_HEIGHT, VIRTUAL_WIDTH};
+use crate::graphics::icons::{draw_vector_close, draw_vector_gem};
 use crate::monetization::economy::EconomyCatalog;
 
 #[derive(Debug, Clone)]
@@ -46,115 +47,129 @@ impl ShopModal {
 
         // Full-screen card
         let cw = VIRTUAL_WIDTH - 32.0;
-        let ch = VIRTUAL_HEIGHT - 100.0;
+        let ch = VIRTUAL_HEIGHT - 80.0;
         let card_x = 16.0;
-        let card_y = 50.0;
-        draw_rectangle(card_x, card_y, cw, ch, Color::new(0.06, 0.05, 0.14, 0.97));
+        let card_y = 40.0;
+        draw_rectangle(card_x, card_y, cw, ch, Color::new(0.06, 0.05, 0.14, 0.98));
         draw_rectangle_lines(card_x, card_y, cw, ch, 2.0, Color::new(0.40, 0.80, 1.0, 0.65));
 
         // Title bar
-        dcx("COSMIC STORE", cx, card_y + 48.0, 32.0, WHITE, font);
-        let dust_str = format!("STARDUST  {}", stardust);
-        dcx(&dust_str, cx, card_y + 80.0, 22.0, Color::new(0.42, 0.90, 1.0, 1.0), font);
+        dcx("COSMIC STORE", cx, card_y + 44.0, 32.0, WHITE, font);
+
+        // Stardust balance badge
+        let dust_card_w = 200.0;
+        let dust_card_x = cx - dust_card_w * 0.5;
+        let dust_card_y = card_y + 58.0;
+        draw_rectangle(dust_card_x, dust_card_y, dust_card_w, 36.0, Color::new(0.10, 0.10, 0.22, 0.85));
+        draw_rectangle_lines(dust_card_x, dust_card_y, dust_card_w, 36.0, 1.0, Color::new(0.35, 0.65, 0.95, 0.50));
+        draw_vector_gem(dust_card_x + 24.0, dust_card_y + 18.0, 16.0, Color::new(0.35, 0.85, 1.0, 1.0));
+        dtx(&format!("STARDUST: {}", stardust), dust_card_x + 42.0, dust_card_y + 25.0, 18.0, Color::new(0.85, 0.95, 1.0, 1.0), font);
 
         // Close button
-        let close_x = card_x + cw - 55.0;
-        let close_y = card_y + 12.0;
-        let close_hov = inside(mouse_pos, close_x, close_y, 44.0, 44.0);
+        let close_x = card_x + cw - 52.0;
+        let close_y = card_y + 14.0;
+        let close_hov = inside(mouse_pos, close_x, close_y, 38.0, 38.0);
         draw_rectangle(
-            close_x, close_y, 44.0, 44.0,
-            if close_hov { Color::new(0.82, 0.22, 0.22, 0.90) } else { Color::new(0.32, 0.10, 0.10, 0.65) },
+            close_x, close_y, 38.0, 38.0,
+            if close_hov { Color::new(0.82, 0.22, 0.22, 0.90) } else { Color::new(0.25, 0.12, 0.16, 0.70) },
         );
-        draw_rectangle_lines(close_x, close_y, 44.0, 44.0, 1.5, WHITE);
-        dcx("X", close_x + 22.0, close_y + 30.0, 24.0, WHITE, font);
+        draw_rectangle_lines(close_x, close_y, 38.0, 38.0, 1.5, WHITE);
+        draw_vector_close(close_x + 19.0, close_y + 19.0, 16.0, 2.0, WHITE);
         if close_hov && mouse_clicked { action = ShopAction::Close; }
 
         // Status message
         if let Some(msg) = status_message {
-            dcx(msg, cx, card_y + 108.0, 20.0, Color::new(0.30, 1.0, 0.50, 1.0), font);
+            dcx(msg, cx, card_y + 116.0, 18.0, Color::new(0.30, 1.0, 0.50, 1.0), font);
         }
 
-        let mut cur_y = card_y + 128.0;
+        let mut cur_y = card_y + 130.0;
 
-        // ── IAP items ────────────────────────────────────────────────────────
-        dcx("IN-APP PURCHASES", cx, cur_y + 22.0, 20.0, Color::new(0.95, 0.82, 0.30, 1.0), font);
-        cur_y += 36.0;
+        // ── In-App Purchases & Stardust Packs ────────────────────────────────
+        dcx("IN-APP PURCHASES & PACKS", cx, cur_y + 18.0, 20.0, Color::new(0.95, 0.82, 0.30, 1.0), font);
+        cur_y += 32.0;
 
         for item in &catalog.iap_items {
             let is_owned = item.id.contains("removeads") && ads_removed;
-            let ih = 78.0;
+            let ih = 68.0;
             let iw = cw - 32.0;
             let ix = card_x + 16.0;
 
-            draw_rectangle(ix, cur_y, iw, ih, Color::new(0.11, 0.09, 0.20, 0.82));
+            draw_rectangle(ix, cur_y, iw, ih, Color::new(0.11, 0.09, 0.20, 0.85));
             draw_rectangle_lines(ix, cur_y, iw, ih, 1.0, Color::new(0.30, 0.40, 0.60, 0.45));
 
-            dtx(&item.title, ix + 14.0, cur_y + 30.0, 22.0, WHITE, font);
-            dtx(&item.description, ix + 14.0, cur_y + 58.0, 16.0, Color::new(0.72, 0.76, 0.86, 0.75), font);
+            dtx(&item.title, ix + 14.0, cur_y + 26.0, 19.0, WHITE, font);
+            dtx(&item.description, ix + 14.0, cur_y + 50.0, 14.0, Color::new(0.72, 0.76, 0.86, 0.75), font);
 
             let bw2 = 120.0;
-            let bh = 46.0;
+            let bh = 42.0;
             let bx2 = ix + iw - bw2 - 12.0;
-            let by2 = cur_y + 16.0;
+            let by2 = cur_y + 13.0;
 
             if is_owned {
-                draw_rectangle(bx2, by2, bw2, bh, Color::new(0.18, 0.40, 0.24, 0.65));
-                dcx("ACTIVE", bx2 + bw2 * 0.5, by2 + 30.0, 18.0, Color::new(0.5, 0.95, 0.62, 1.0), font);
+                draw_rectangle(bx2, by2, bw2, bh, Color::new(0.18, 0.18, 0.24, 0.50));
+                dcx("OWNED", bx2 + bw2 * 0.5, by2 + 26.0, 17.0, Color::new(0.50, 0.80, 0.50, 0.85), font);
             } else {
-                let hov = inside(mouse_pos, bx2, by2, bw2, bh);
+                let hov2 = inside(mouse_pos, bx2, by2, bw2, bh);
                 draw_rectangle(bx2, by2, bw2, bh,
-                    if hov { Color::new(0.28, 0.80, 0.44, 1.0) } else { Color::new(0.18, 0.62, 0.32, 1.0) });
-                draw_rectangle_lines(bx2, by2, bw2, bh, 1.2, WHITE);
-                dcx(&item.price_display, bx2 + bw2 * 0.5, by2 + 30.0, 20.0, WHITE, font);
-                if hov && mouse_clicked { action = ShopAction::BuyItem(item.id.clone()); }
+                    if hov2 { Color::new(0.28, 0.82, 0.45, 1.0) } else { Color::new(0.18, 0.64, 0.34, 1.0) });
+                draw_rectangle_lines(bx2, by2, bw2, bh, 1.5, WHITE);
+                dcx(&item.price_display, bx2 + bw2 * 0.5, by2 + 26.0, 17.0, WHITE, font);
+                if hov2 && mouse_clicked { action = ShopAction::BuyItem(item.id.clone()); }
             }
+
             cur_y += ih + 10.0;
         }
 
-        // ── Cosmetic skins ────────────────────────────────────────────────────
-        cur_y += 10.0;
-        dcx("COSMETIC THEMES", cx, cur_y + 22.0, 20.0, Color::new(0.42, 0.90, 1.0, 1.0), font);
-        cur_y += 36.0;
+        // ── Cosmic Skins ─────────────────────────────────────────────────────
+        cur_y += 12.0;
+        dcx("COSMIC SKINS", cx, cur_y + 18.0, 20.0, Color::new(0.85, 0.45, 1.0, 1.0), font);
+        cur_y += 32.0;
 
-        for item in &catalog.skin_items {
-            let is_unlocked = unlocked_skins.contains(&item.id);
-            let is_equipped = equipped_skin == item.id;
-            let ih = 72.0;
+        for skin in &catalog.skin_items {
+            let is_unlocked = unlocked_skins.contains(&skin.id);
+            let is_equipped = equipped_skin == skin.id;
+            let ih = 64.0;
             let iw = cw - 32.0;
             let ix = card_x + 16.0;
 
-            draw_rectangle(ix, cur_y, iw, ih, Color::new(0.11, 0.09, 0.20, 0.82));
-            draw_rectangle_lines(ix, cur_y, iw, ih, 1.0, Color::new(0.30, 0.40, 0.60, 0.45));
+            draw_rectangle(ix, cur_y, iw, ih, Color::new(0.12, 0.08, 0.20, 0.85));
+            draw_rectangle_lines(ix, cur_y, iw, ih, 1.0, Color::new(0.50, 0.30, 0.70, 0.45));
 
-            dtx(&item.title, ix + 14.0, cur_y + 28.0, 21.0, WHITE, font);
-            dtx(&item.description, ix + 14.0, cur_y + 54.0, 16.0, Color::new(0.72, 0.76, 0.86, 0.75), font);
+            dtx(&skin.title, ix + 14.0, cur_y + 26.0, 19.0, WHITE, font);
+            dtx(&skin.description, ix + 14.0, cur_y + 48.0, 14.0, Color::new(0.75, 0.70, 0.85, 0.75), font);
 
-            let bw2 = 120.0;
-            let bh = 44.0;
+            let bw2 = 110.0;
+            let bh = 40.0;
             let bx2 = ix + iw - bw2 - 12.0;
-            let by2 = cur_y + 14.0;
+            let by2 = cur_y + 12.0;
 
             if is_equipped {
-                draw_rectangle(bx2, by2, bw2, bh, Color::new(0.20, 0.50, 0.72, 0.75));
-                dcx("EQUIPPED", bx2 + bw2 * 0.5, by2 + 28.0, 18.0, WHITE, font);
+                draw_rectangle(bx2, by2, bw2, bh, Color::new(0.20, 0.50, 0.30, 0.75));
+                dcx("EQUIPPED", bx2 + bw2 * 0.5, by2 + 26.0, 16.0, Color::new(0.60, 1.0, 0.60, 1.0), font);
             } else if is_unlocked {
-                let hov = inside(mouse_pos, bx2, by2, bw2, bh);
+                let hov2 = inside(mouse_pos, bx2, by2, bw2, bh);
                 draw_rectangle(bx2, by2, bw2, bh,
-                    if hov { Color::new(0.36, 0.58, 0.90, 1.0) } else { Color::new(0.26, 0.46, 0.74, 1.0) });
-                draw_rectangle_lines(bx2, by2, bw2, bh, 1.2, WHITE);
-                dcx("EQUIP", bx2 + bw2 * 0.5, by2 + 28.0, 18.0, WHITE, font);
-                if hov && mouse_clicked { action = ShopAction::EquipSkin(item.id.clone()); }
+                    if hov2 { Color::new(0.45, 0.30, 0.75, 1.0) } else { Color::new(0.32, 0.20, 0.58, 1.0) });
+                draw_rectangle_lines(bx2, by2, bw2, bh, 1.5, WHITE);
+                dcx("EQUIP", bx2 + bw2 * 0.5, by2 + 26.0, 17.0, WHITE, font);
+                if hov2 && mouse_clicked { action = ShopAction::EquipSkin(skin.id.clone()); }
             } else {
-                let can = stardust >= item.stardust_price;
-                let hov = inside(mouse_pos, bx2, by2, bw2, bh);
-                draw_rectangle(bx2, by2, bw2, bh,
-                    if can && hov { Color::new(0.88, 0.62, 0.22, 1.0) }
-                    else if can   { Color::new(0.76, 0.50, 0.15, 1.0) }
-                    else          { Color::new(0.28, 0.28, 0.34, 0.65) });
-                draw_rectangle_lines(bx2, by2, bw2, bh, 1.2, WHITE);
-                dcx(&item.price_display, bx2 + bw2 * 0.5, by2 + 28.0, 18.0, WHITE, font);
-                if can && hov && mouse_clicked { action = ShopAction::BuyItem(item.id.clone()); }
+                let can_afford = stardust >= skin.stardust_price;
+                let hov2 = inside(mouse_pos, bx2, by2, bw2, bh) && can_afford;
+                let bg_col = if !can_afford {
+                    Color::new(0.18, 0.18, 0.24, 0.50)
+                } else if hov2 {
+                    Color::new(0.75, 0.40, 0.90, 1.0)
+                } else {
+                    Color::new(0.55, 0.25, 0.72, 1.0)
+                };
+                draw_rectangle(bx2, by2, bw2, bh, bg_col);
+                if can_afford { draw_rectangle_lines(bx2, by2, bw2, bh, 1.5, WHITE); }
+                let pr_str = format!("{} DUST", skin.stardust_price);
+                dcx(&pr_str, bx2 + bw2 * 0.5, by2 + 26.0, 15.0, if can_afford { WHITE } else { Color::new(0.5,0.5,0.6,0.8) }, font);
+                if hov2 && mouse_clicked { action = ShopAction::BuyItem(skin.id.clone()); }
             }
+
             cur_y += ih + 8.0;
         }
 

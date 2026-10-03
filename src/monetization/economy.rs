@@ -16,6 +16,12 @@ pub struct EconomyCatalog {
     pub skin_items: Vec<ShopItem>,
 }
 
+impl Default for EconomyCatalog {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EconomyCatalog {
     pub fn new() -> Self {
         let iap_items = vec![

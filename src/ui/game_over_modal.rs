@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
 use crate::core::config::{VIRTUAL_HEIGHT, VIRTUAL_WIDTH};
+use crate::graphics::icons::draw_vector_gem;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameOverAction {
@@ -41,47 +42,49 @@ impl GameOverModal {
         let cx = VIRTUAL_WIDTH * 0.5;
 
         // Dim backdrop
-        draw_rectangle(0.0, 0.0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, Color::new(0.0, 0.0, 0.0, 0.80));
+        draw_rectangle(0.0, 0.0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, Color::new(0.0, 0.0, 0.0, 0.82));
 
         // Card
-        let cw = VIRTUAL_WIDTH - 48.0;
-        let ch = 620.0;
-        let cx2 = 24.0;
-        let cy = (VIRTUAL_HEIGHT - ch) * 0.5 - 10.0;
-        draw_rectangle(cx2, cy, cw, ch, Color::new(0.07, 0.06, 0.16, 0.97));
+        let cw = VIRTUAL_WIDTH - 64.0;
+        let ch = 640.0;
+        let cx2 = 32.0;
+        let cy = (VIRTUAL_HEIGHT - ch) * 0.5;
+        draw_rectangle(cx2, cy, cw, ch, Color::new(0.07, 0.06, 0.16, 0.98));
         draw_rectangle_lines(cx2, cy, cw, ch, 2.0, Color::new(0.85, 0.35, 1.0, 0.70));
 
         // Title
-        dcx("SINGULARITY COLLAPSED", cx, cy + 60.0, 32.0, Color::new(1.0, 0.35, 0.45, 1.0), font);
+        dcx("CONTAINMENT OVERFLOW", cx, cy + 54.0, 32.0, Color::new(1.0, 0.35, 0.45, 1.0), font);
 
         // Stats plaque
-        let py = cy + 85.0;
-        draw_rectangle(cx2 + 16.0, py, cw - 32.0, 150.0, Color::new(0.12, 0.10, 0.22, 0.85));
-        draw_rectangle_lines(cx2 + 16.0, py, cw - 32.0, 150.0, 1.0, Color::new(0.40, 0.35, 0.60, 0.45));
+        let py = cy + 78.0;
+        draw_rectangle(cx2 + 16.0, py, cw - 32.0, 154.0, Color::new(0.12, 0.10, 0.22, 0.88));
+        draw_rectangle_lines(cx2 + 16.0, py, cw - 32.0, 154.0, 1.0, Color::new(0.40, 0.35, 0.60, 0.45));
 
-        dtx("FINAL SCORE", cx2 + 36.0, py + 40.0, 20.0, Color::new(0.70, 0.75, 0.90, 0.85), font);
+        dtx("FINAL SCORE", cx2 + 36.0, py + 36.0, 18.0, Color::new(0.70, 0.75, 0.90, 0.85), font);
         let sc = score.to_string();
-        dtx(&sc, cx2 + 36.0, py + 90.0, 52.0, WHITE, font);
+        dtx(&sc, cx2 + 36.0, py + 86.0, 50.0, WHITE, font);
 
         if score >= high_score && score > 0 {
-            dtx("NEW HIGH SCORE!", cx2 + 36.0, py + 125.0, 20.0, Color::new(1.0, 0.88, 0.20, 1.0), font);
+            dtx("NEW HIGH SCORE!", cx2 + 36.0, py + 118.0, 18.0, Color::new(1.0, 0.88, 0.20, 1.0), font);
         } else {
-            let ht = format!("BEST  {}", high_score);
-            dtx(&ht, cx2 + 36.0, py + 125.0, 20.0, Color::new(0.70, 0.70, 0.82, 0.75), font);
+            let ht = format!("BEST {}", high_score);
+            dtx(&ht, cx2 + 36.0, py + 118.0, 18.0, Color::new(0.70, 0.70, 0.82, 0.75), font);
         }
 
+        // Stardust badge in plaque
+        draw_vector_gem(cx2 + 48.0, py + 140.0, 18.0, Color::new(0.35, 0.85, 1.0, 1.0));
         let dust_lbl = if stardust_doubled {
-            format!("STARDUST +{} (DOUBLED!)", stardust_earned)
+            format!("+{} STARDUST (DOUBLED!)", stardust_earned)
         } else {
-            format!("STARDUST +{}", stardust_earned)
+            format!("+{} STARDUST", stardust_earned)
         };
-        dtx(&dust_lbl, cx2 + 36.0, py + 148.0, 22.0, Color::new(0.42, 0.90, 1.0, 1.0), font);
+        dtx(&dust_lbl, cx2 + 66.0, py + 146.0, 20.0, Color::new(0.42, 0.90, 1.0, 1.0), font);
 
         // Buttons
         let bw = cw - 36.0;
         let bx = cx2 + 18.0;
-        let btn_h = 64.0;
-        let mut by = cy + 260.0;
+        let btn_h = 62.0;
+        let mut by = cy + 252.0;
 
         // Button 1: Revive via ad
         if revive_available {
@@ -89,11 +92,11 @@ impl GameOverModal {
             draw_rectangle(bx, by, bw, btn_h,
                 if hov { Color::new(0.30, 0.78, 0.46, 1.0) } else { Color::new(0.20, 0.62, 0.36, 1.0) });
             draw_rectangle_lines(bx, by, bw, btn_h, 1.8, WHITE);
-            dcx("WATCH AD  REWIND & REVIVE", cx, by + 42.0, 24.0, WHITE, font);
+            dcx("WATCH AD: REWIND & REVIVE", cx, by + 40.0, 22.0, WHITE, font);
             if hov && mouse_clicked { action = GameOverAction::WatchAdRevive; }
         } else {
             draw_rectangle(bx, by, bw, btn_h, Color::new(0.18, 0.18, 0.24, 0.55));
-            dcx("REVIVE USED", cx, by + 42.0, 22.0, Color::new(0.50, 0.50, 0.58, 1.0), font);
+            dcx("REVIVE USED", cx, by + 40.0, 20.0, Color::new(0.50, 0.50, 0.58, 1.0), font);
         }
         by += btn_h + 14.0;
 
@@ -103,11 +106,11 @@ impl GameOverModal {
             draw_rectangle(bx, by, bw, btn_h,
                 if hov { Color::new(0.88, 0.58, 0.18, 1.0) } else { Color::new(0.72, 0.46, 0.10, 1.0) });
             draw_rectangle_lines(bx, by, bw, btn_h, 1.8, WHITE);
-            dcx("WATCH AD  2X STARDUST", cx, by + 42.0, 24.0, WHITE, font);
+            dcx("WATCH AD: 2X STARDUST", cx, by + 40.0, 22.0, WHITE, font);
             if hov && mouse_clicked { action = GameOverAction::WatchAdDoubleStardust; }
         } else {
             draw_rectangle(bx, by, bw, btn_h, Color::new(0.18, 0.18, 0.24, 0.40));
-            dcx("STARDUST DOUBLED", cx, by + 42.0, 22.0, Color::new(0.50, 0.50, 0.58, 0.75), font);
+            dcx("STARDUST CLAIMED", cx, by + 40.0, 20.0, Color::new(0.50, 0.50, 0.58, 0.75), font);
         }
         by += btn_h + 14.0;
 
@@ -116,7 +119,7 @@ impl GameOverModal {
         draw_rectangle(bx, by, bw, btn_h,
             if hov3 { Color::new(0.32, 0.48, 0.88, 1.0) } else { Color::new(0.22, 0.36, 0.72, 1.0) });
         draw_rectangle_lines(bx, by, bw, btn_h, 1.8, WHITE);
-        dcx("PLAY AGAIN", cx, by + 42.0, 26.0, WHITE, font);
+        dcx("PLAY AGAIN", cx, by + 40.0, 24.0, WHITE, font);
         if hov3 && mouse_clicked { action = GameOverAction::Restart; }
         by += btn_h + 14.0;
 
@@ -125,7 +128,7 @@ impl GameOverModal {
         draw_rectangle(bx, by, bw, btn_h,
             if hov4 { Color::new(0.62, 0.28, 0.80, 1.0) } else { Color::new(0.46, 0.18, 0.62, 1.0) });
         draw_rectangle_lines(bx, by, bw, btn_h, 1.8, WHITE);
-        dcx("COSMIC SHOP", cx, by + 42.0, 26.0, WHITE, font);
+        dcx("COSMIC SHOP", cx, by + 40.0, 24.0, WHITE, font);
         if hov4 && mouse_clicked { action = GameOverAction::OpenShop; }
 
         action

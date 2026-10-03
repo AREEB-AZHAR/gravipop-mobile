@@ -27,6 +27,12 @@ pub struct ParticleEngine {
     pub floating_texts: Vec<FloatingText>,
 }
 
+impl Default for ParticleEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ParticleEngine {
     pub fn new() -> Self {
         Self {

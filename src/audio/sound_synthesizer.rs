@@ -58,6 +58,14 @@ impl AudioEngine {
             play_sound_once(snd);
         }
     }
+
+    pub fn play_victory(&self) {
+        if !self.sound_enabled || self.chime_sounds.is_empty() {
+            return;
+        }
+        let top_idx = self.chime_sounds.len() - 1;
+        play_sound_once(&self.chime_sounds[top_idx]);
+    }
 }
 
 /// Generates a valid in-memory PCM 16-bit 44100Hz mono WAV buffer of a harmonic bell chime

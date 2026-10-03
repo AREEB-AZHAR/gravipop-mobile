@@ -25,6 +25,12 @@ pub struct MockAdService {
     is_interstitial: bool,
 }
 
+impl Default for MockAdService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MockAdService {
     pub fn new() -> Self {
         Self {

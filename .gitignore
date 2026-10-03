@@ -3,6 +3,8 @@
 Cargo.lock
 *.apk
 *.aab
+__cargo_apk_main.tmp
+src/__cargo_apk_main.tmp
 .DS_Store
 Thumbs.db
 .gradle/

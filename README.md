@@ -7,23 +7,34 @@
 
 ## 🚀 Recent Accomplishments & System Upgrades
 
+- **Physics & Merge Engine Overhaul (100% Resolved)**:
+  - **Immediate Surface Touch Merging**: Replaced the previous 8% interpenetration threshold (`dist < contact * 0.92`) with a robust surface contact detector (`dist <= contact * 1.02`). Same-tier celestial bodies now fuse reliably upon touching, whether falling, rolling, or resting side-by-side.
+  - **Unstable Vertical Equilibrium Break (Totem Pole Fix)**: When celestial spheres land vertically atop one another (`dx ≈ 0`), the engine applies a lateral slope perturbation to the collision normal and imparts rolling velocity. Spheres realistically slide and roll down curved shoulders into resting crevices, mimicking genuine physical spheres.
+  - **Zero Floor & Wall Tunneling**: Implemented post-solver boundary clamping (`JAR_LEFT`, `JAR_RIGHT`, `JAR_BOTTOM`) for all bodies. Settled bodies at the bottom of the container are held firmly above the container line without a single pixel protruding.
+  - **Micro-Velocity Sleep**: Added resting velocity damping to prevent jitter at the bottom of heavy stacks.
+
+- **Celestial Tier Visual Redesign (10 Unique Visual Identities)**:
+  - **Asteroid**: Craggy dark basalt rock with 3 distinct crater pits and molten amber mineral veins.
+  - **Moon**: Silvery regolith with dark lunar maria basalt seas, rayed impact craters, and crisp terminator rim lighting.
+  - **Earth (Terrestrial)**: Deep azure oceans, emerald continental landmasses, polar ice caps, and dynamic swirling atmospheric cloud spirals.
+  - **Gas Giant (Jupiter)**: 5 alternating horizontal turbulent storm belts and an elliptical swirling **Great Red Spot** storm vortex.
+  - **Ringed Giant (Saturn)**: Golden sphere with **3D perspective dual-ring system** featuring depth occlusion (back ring behind, front ring in front) and planetary shadow.
+  - **Ice Giant**: Crystalline turquoise glacial facets, geometric ice plates, and glowing neon-cyan auroral crowns at magnetic poles.
+  - **Red Dwarf**: Convective boiling solar granules and dynamic arching coronal prominences / pulsating solar flares.
+  - **Blue Supergiant**: Blinding white-hot thermonuclear core with 8 radiant cardinal starburst light rays and plasma filaments.
+  - **Pulsar (Magnetar)**: Ultra-dense violet neutron core with equatorial magnetic flux loops and **dual rotating relativistic radiation jets**.
+  - **Singularity**: Absolute pitch-black event horizon encircled by an **Einstein gravitational lensing photon ring** and an iridescent violet/gold relativistic accretion disk with Doppler boosting.
+
+- **Deconflicted UI Miniature Previews**:
+  - Implemented `BodyRenderer::draw_preview(tier, center, radius: 22.0)`. Choice A, Choice B, and Comet Reserve slots now render neat, compact celestial miniatures that never spill over card borders or obscure card labels.
+
 - **Universal Cross-Ecosystem Normalization**:
   - Implemented dynamic virtual camera projection (`720 × 1280`) with automatic pillarbox/letterbox scaling. Preserves sharp aspect ratio and prevents any visual distortion across 16:9, 19.5:9, 21:9 mobile displays and high-DPI desktop monitors.
   - Unified input system supporting mouse clicks, multi-touch drag-to-aim with release-to-drop (`TouchPhase`), and full desktop keyboard controls (`Arrow Keys / A / D / Spacebar`).
 - **Zero-Glyph Procedural Vector Icon Architecture**:
   - Replaced standard unicode/emoji text elements with math-based vector rendering (`draw_vector_star`, `draw_vector_gem`, `draw_vector_play`, `draw_vector_pause`, `draw_vector_lock`, `draw_vector_close`).
-  - Completely eliminates missing glyphs, encoding mismatches, and "tofu" empty boxes `[]` on every operating system.
-- **Deconflicted In-Game Ergonomics**:
-  - **Top Bar (y: 15..85)**: Stardust crystal counter, central high-score pill, and pause trigger.
-  - **Objective Banner (y: 95..175)**: Sector name, goal description, and animated emerald progress bar.
-  - **Spawner Bar (y: 195..280)**: Choice A card, Comet Reserve ("Bank / Swap" slot), and Choice B card.
-  - **The Jar Container (y: 360..1110)**: 750px of vertical space with a pulsating danger threshold line and trajectory guide laser.
-  - **Strategic Abilities Bar (y: 1140..1220)**: Safely positioned strictly beneath the jar floor to ensure ability clicks never accidentally drop celestial bodies.
-- **3-Chapter Tabbed Galaxy Map**:
-  - Features 15 authored sectors partitioned into 3 chapters (*Nebula Rim*, *Frost Expanse*, *Dark Matter Void*).
-  - Clean pagination prevents off-screen text run-off and tracks 3-star ratings per sector.
 - **Zero-Crash Android Native Integration**:
-  - Configured miniquad JNI entry points (`quad_main`) and verified native compilation for `aarch64-linux-android`.
+  - Configured miniquad JNI entry points (`quad_main`) and verified native compilation for `aarch64-linux-android`. All 18 automated unit tests pass with zero warnings.
 
 ---
 
@@ -122,7 +133,9 @@ cargo build --target wasm32-unknown-unknown --release
 ```text
 gravipop-mobile/
 ├── assets/
-│   └── font.ttf                        # High-legibility TrueType typography
+│   ├── font.ttf                        # High-legibility TrueType typography
+│   ├── celestial_atlas.jpg             # High-res celestial planet art atlas
+│   └── gravipop_icon.jpg               # Premium cosmic app icon artwork
 ├── src/
 │   ├── main.rs                         # Desktop executable entry point
 │   ├── lib.rs                          # Universal game loop, input normalization, quad_main

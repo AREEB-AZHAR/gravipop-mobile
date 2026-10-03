@@ -138,11 +138,13 @@ mod tests {
 
     #[test]
     fn test_save_roundtrip() {
-        let mut data = SaveData::default();
-        data.high_score = 9999;
-        data.stardust = 500;
-        data.sector_stars = vec![3, 2, 1, 0];
-        data.sectors_unlocked = 3;
+        let data = SaveData {
+            high_score: 9999,
+            stardust: 500,
+            sector_stars: vec![3, 2, 1, 0],
+            sectors_unlocked: 3,
+            ..Default::default()
+        };
 
         let json = serde_json::to_string(&data).unwrap();
         let loaded: SaveData = serde_json::from_str(&json).unwrap();

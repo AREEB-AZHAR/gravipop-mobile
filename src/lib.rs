@@ -741,10 +741,9 @@ pub async fn game_main() {
                 let a_bg = if a_sel { Color::new(0.25, 0.80, 0.45, 0.90) } else if a_hov { Color::new(0.18, 0.22, 0.35, 0.85) } else { Color::new(0.12, 0.12, 0.24, 0.75) };
                 draw_rectangle(a_x, ch_y, ch_w, ch_h, a_bg);
                 draw_rectangle_lines(a_x, ch_y, ch_w, ch_h, if a_sel { 2.5 } else { 1.5 }, if a_sel { WHITE } else { Color::new(0.45, 0.45, 0.65, 0.5) });
-                let ca = CelestialBody::new(101, choice_a, Vec2::new(a_x + 45.0, ch_y + 40.0), Vec2::ZERO);
-                BodyRenderer::draw_body(&ca);
-                draw_txt(choice_a.name(), a_x + 85.0, ch_y + 36.0, 18.0, WHITE, f);
-                if a_sel { draw_txt("ACTIVE", a_x + 85.0, ch_y + 60.0, 14.0, Color::new(1.0, 0.95, 0.40, 1.0), f); }
+                BodyRenderer::draw_preview(choice_a, Vec2::new(a_x + 40.0, ch_y + 40.0), 22.0);
+                draw_txt(choice_a.name(), a_x + 76.0, ch_y + 36.0, 18.0, WHITE, f);
+                if a_sel { draw_txt("ACTIVE", a_x + 76.0, ch_y + 58.0, 14.0, Color::new(1.0, 0.95, 0.40, 1.0), f); }
 
                 // Comet Reserve Slot (Center Circle)
                 let res_cx = VIRTUAL_WIDTH * 0.5;
@@ -754,8 +753,7 @@ pub async fn game_main() {
                 draw_circle_lines(res_cx, res_cy, res_r, 2.0, Color::new(0.85, 0.65, 0.20, 0.85));
 
                 if let Some(rt) = reserve {
-                    let rb = CelestialBody::new(103, rt, Vec2::new(res_cx, res_cy), Vec2::ZERO);
-                    BodyRenderer::draw_body(&rb);
+                    BodyRenderer::draw_preview(rt, Vec2::new(res_cx, res_cy), 22.0);
                 } else {
                     draw_centered("RESERVE", res_cx, res_cy - 6.0, 14.0, Color::new(0.70, 0.70, 0.85, 0.80), f);
                     draw_centered("BANK", res_cx, res_cy + 14.0, 16.0, Color::new(1.0, 0.85, 0.30, 0.90), f);
@@ -768,10 +766,9 @@ pub async fn game_main() {
                 let b_bg = if b_sel { Color::new(0.25, 0.80, 0.45, 0.90) } else if b_hov { Color::new(0.18, 0.22, 0.35, 0.85) } else { Color::new(0.12, 0.12, 0.24, 0.75) };
                 draw_rectangle(b_x, ch_y, ch_w, ch_h, b_bg);
                 draw_rectangle_lines(b_x, ch_y, ch_w, ch_h, if b_sel { 2.5 } else { 1.5 }, if b_sel { WHITE } else { Color::new(0.45, 0.45, 0.65, 0.5) });
-                let cb = CelestialBody::new(102, choice_b, Vec2::new(b_x + 45.0, ch_y + 40.0), Vec2::ZERO);
-                BodyRenderer::draw_body(&cb);
-                draw_txt(choice_b.name(), b_x + 85.0, ch_y + 36.0, 18.0, WHITE, f);
-                if b_sel { draw_txt("ACTIVE", b_x + 85.0, ch_y + 60.0, 14.0, Color::new(1.0, 0.95, 0.40, 1.0), f); }
+                BodyRenderer::draw_preview(choice_b, Vec2::new(b_x + 40.0, ch_y + 40.0), 22.0);
+                draw_txt(choice_b.name(), b_x + 76.0, ch_y + 36.0, 18.0, WHITE, f);
+                if b_sel { draw_txt("ACTIVE", b_x + 76.0, ch_y + 58.0, 14.0, Color::new(1.0, 0.95, 0.40, 1.0), f); }
 
                 // 4. Aim Guideline & Body Preview
                 let active_tier = if selected_choice == 0 { choice_a } else { choice_b };

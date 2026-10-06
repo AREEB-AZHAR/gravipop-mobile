@@ -250,3 +250,4 @@ assets/                          Font and game art
 Cargo.lock                       Reproducible Rust dependency versions
 vercel.json                      Vite deployment and WASM headers
 ~~~
+

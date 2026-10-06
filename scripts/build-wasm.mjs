@@ -36,9 +36,11 @@ function findMacroquadBundle() {
 }
 
 console.log("==> Building GraviPop WebAssembly release binary...");
-await run("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown", "--bin", "gravipop-mobile"]);
+await run("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown", "--bin", "gravipop-desktop"]);
 
-const wasmSource = join(projectRoot, "target", "wasm32-unknown-unknown", "release", "gravipop-mobile.wasm");
+const wasmHyphen = join(projectRoot, "target", "wasm32-unknown-unknown", "release", "gravipop-desktop.wasm");
+const wasmUnderscore = join(projectRoot, "target", "wasm32-unknown-unknown", "release", "gravipop_desktop.wasm");
+const wasmSource = existsSync(wasmHyphen) ? wasmHyphen : wasmUnderscore;
 if (!existsSync(wasmSource)) {
   throw new Error(`WASM binary not found at ${wasmSource}`);
 }

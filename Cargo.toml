@@ -20,7 +20,7 @@ crate-type = ["cdylib", "rlib"]
 path = "src/lib.rs"
 
 [[bin]]
-name = "gravipop-mobile"
+name = "gravipop-desktop"
 path = "src/main.rs"
 
 [package.metadata.android]

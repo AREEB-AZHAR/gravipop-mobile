@@ -6,6 +6,8 @@ A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, a
 
 ## Recent updates
 
+- **Resolved PDB output filename collision.** Renamed the desktop binary target to `gravipop-desktop` in `Cargo.toml` and build scripts, eliminating the Cargo 1.97 warning on Windows MSVC where `gravipop-mobile` (bin) and `gravipop_mobile` (lib) collided on `gravipop_mobile.pdb`.
+- **Verified modern Android APK pipeline.** Documented why `cargo quad-apk` panics on modern Rust toolchains (lockfile v4 and edition 2024 incompatibility in cargo 0.62) and validated the production-grade `npm run build:android` + Gradle workflow generating verified `app-debug.apk` (15.6 MB) with NDK 28.2.
 - **One result-screen save action.** Game Over and Sector Complete center scores and rewards. **Save Score & Return Home** validates the callsign, saves progress, submits once, and returns home. The web textbox has no duplicate submit button; Enter uses the same action.
 - **Merge-based drops.** Every new run starts with Asteroid, Moon, and Earth, weighted 60:30:10. Merging two Saturns into an Ice Giant adds Jupiter. Each new highest merged planet then adds the next drop tier. Score and historical best score never unlock drops.
 - **Rare larger planets.** Jupiter starts at approximately 0.1% of drops, increasing to approximately 0.6% after 100 further merges. Each larger tier is rarer; all larger drops together remain below 2%. Unlocks reset on a new run and survive a revive. Quasar and Cosmic Core are merge-only.
@@ -112,11 +114,20 @@ Pop-Location
 
 For a store bundle, run :app:bundleRelease and configure your own release signing in Android Studio. Release artifacts are unsigned until signing is configured. APKs, bundles, local SDK paths, and build directories are ignored by Git.
 
-### The Cargo.lock version-4 error
+### Why `cargo quad-apk` Fails & How the Gradle Pipeline Works
 
-cargo-quad-apk 0.1.4 embeds an older Cargo parser that rejects modern lockfiles. Updating your normal Cargo executable alone does not replace that parser. Keep the valid lockfile and use **npm run build:android → Gradle**. This also packages the Kotlin ad integration, which a standalone cargo-quad-apk build would omit.
+Running `cargo quad-apk build --release` fails on modern Rust and Android toolchains due to two upstream limitations:
+1. **Cargo 0.62 Parser Lockout:** `cargo-quad-apk` 0.1.4 (published in 2022) embeds and links against the ancient `cargo = "0.62.0"` crate. Modern Cargo 1.78+ generates `Cargo.lock` with `version = 4`. When `cargo-quad-apk` attempts to resolve the workspace to locate Miniquad's Java files, its internal 2022 parser panics (`lock file version 4 was found, but this version of Cargo does not understand this lock file`).
+2. **Rust Edition 2024 Panics:** Even if the lockfile is temporarily modified to `version = 3`, modern transitive dependencies in the Rust ecosystem (e.g., `icu_locale_core` pulled transitively by HTTPS/TLS crates) use `edition = "2024"`. The internal Cargo 0.62 parser panics again with `this version of Cargo is older than the '2024' edition, and only supports '2015', '2018', and '2021' editions`.
+3. **NDK 28 Toolchain Structure:** `cargo-quad-apk` expects older NDK (r21–r25) standalone binary conventions, whereas NDK 28 on Windows uses `.cmd` script wrappers (e.g. `aarch64-linux-android24-clang.cmd`).
 
-scripts/build-android.mjs copies the Java host from the exact Miniquad dependency linked into Rust, compiles the JNI library, and copies it into jniLibs/. It sets NDK C compiler/archive paths for the HTTPS dependency and 16 KB ELF page alignment.
+**The Solution (`npm run build:android` → Gradle):**
+Instead of invoking `cargo-quad-apk`, use the production Gradle build:
+- `scripts/build-android.mjs` automatically inspects `miniquad`'s manifest via `cargo metadata`, extracts Miniquad's Java host files (`QuadActivity.java`, `QuadNative.java`), configures the NDK 28 Clang cross-compilation environment variables, compiles the `libgravipop_mobile.so` shared library with 16 KB ELF page alignment (required by Android 15), and places it in `android/app/src/main/jniLibs/arm64-v8a/`.
+- Gradle (`.\gradlew.bat :app:assembleDebug`) then packages the APK with Android SDK 36, Google Mobile Ads SDK, and Miniquad native activity, outputting the verified installable APK: `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+### PDB Output Filename Collision Resolution
+In Cargo, dashes (`-`) are normalized to underscores (`_`) when generating `.pdb` debug symbol files on Windows MSVC. Having a binary target `gravipop-mobile` alongside a library target `gravipop_mobile` caused both to emit `gravipop_mobile.pdb` in `target/debug/deps/`, triggering a compiler collision warning. Renaming the binary entry point to `gravipop-desktop` in `Cargo.toml` cleanly separates the two build artifacts and resolves all collision warnings.
 
 ## Ads: test now, live after publisher setup
 

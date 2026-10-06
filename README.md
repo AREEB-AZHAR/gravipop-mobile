@@ -11,6 +11,10 @@
 | :---: | :---: | :---: | :---: |
 | ![Title Screen](docs/screenshots/title_screen_verified.png) | ![Active Gameplay](docs/screenshots/gameplay_active_verified.png) | ![Physics Roll Off](docs/screenshots/test_roll_off_physics.png) | ![Global Leaderboard](docs/screenshots/leaderboard_screen_verified.png) |
 
+| Live Vercel Production Title | Live Vercel Active Merge Arena |
+| :---: | :---: |
+| ![Vercel Live Screen](docs/screenshots/vercel_live_verified.png) | ![Vercel Live Gameplay](docs/screenshots/vercel_gameplay_verified.png) |
+
 ---
 
 ## 🚀 Recent Accomplishments & System Upgrades

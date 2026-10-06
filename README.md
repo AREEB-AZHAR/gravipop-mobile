@@ -11,13 +11,26 @@
 | :---: | :---: | :---: | :---: |
 | ![Title Screen](docs/screenshots/title_screen_verified.png) | ![Active Gameplay](docs/screenshots/gameplay_active_verified.png) | ![Physics Roll Off](docs/screenshots/test_roll_off_physics.png) | ![Global Leaderboard](docs/screenshots/leaderboard_screen_verified.png) |
 
-| Live Vercel Production Title | Live Vercel Active Merge Arena |
-| :---: | :---: |
-| ![Vercel Live Screen](docs/screenshots/vercel_live_verified.png) | ![Vercel Live Gameplay](docs/screenshots/vercel_gameplay_verified.png) |
+| Live Vercel Production Title | Live Vercel Active Merge Arena | Verified Mobile Title Touch | Verified Mobile Live Arena | Verified Mobile Global Leaderboard |
+| :---: | :---: | :---: | :---: | :---: |
+| ![Vercel Live Screen](docs/screenshots/vercel_live_verified.png) | ![Vercel Live Gameplay](docs/screenshots/vercel_gameplay_verified.png) | ![Mobile Title](docs/screenshots/mobile_title_verified.png) | ![Mobile Gameplay](docs/screenshots/mobile_gameplay_verified.png) | ![Mobile Leaderboard](docs/screenshots/mobile_leaderboard_verified.png) |
 
 ---
 
 ## 🚀 Recent Accomplishments & System Upgrades
+
+- **Mobile Canvas Touch Input Normalization (100% Resolved)**:
+  - **Root Cause of Unresponsive Mobile Buttons**: In Macroquad's WebAssembly backend, `touches()` delivers coordinates in raw physical device pixels (`clientX * dpi_scale`), whereas screen bounds (`screen_width()`, `screen_height()`) and `mouse_position()` are already divided by `dpi_scale` (CSS viewport pixels). On modern mobile devices with high pixel ratios (Retina DPR $2.0$ to $3.0+$), `touches()` coordinates were 2× to 3× offset, placing the interaction pointer thousands of pixels off the canvas and causing all hit tests on the **Start Game**, **Cosmetics Store**, and **Global Leaderboard** buttons to fail.
+  - **DPI Normalization in Rust (`src/lib.rs`)**: Divided `t.position` by `macroquad::miniquad::window::dpi_scale().max(1.0)` so touch coordinates align pixel-for-pixel with virtual game coordinates.
+  - **Persistent Pointer State & Multi-Phase Tap Recognition**: Added `last_pointer_pos` state persistence and expanded `tap` detection to `mouse_pressed || touch_started || touch_ended`, ensuring instantaneous response whether tapping quickly or lifting fingers on mobile touchscreens.
+  - **Dual-Channel Event Forwarding in `mq_js_bundle.js`**: Patched `touchstart`, `touchmove`, `touchend`, and `touchcancel` handlers to dispatch both native WebAssembly touch events and simulated mouse down/move/up events, guaranteeing universal compatibility across iOS Safari, Android Chrome, and embedded mobile WebViews.
+
+- **Universal Global Shared Leaderboard Backend (`/api/leaderboard`)**:
+  - **Shared Player Records Across All Devices**: Previously, unconfigured environments fell back strictly to isolated `localStorage`, meaning players on different devices could not see each other's scores.
+  - **Serverless API Route (`api/leaderboard.js`)**: Implemented a dedicated Vercel Serverless Function providing zero-configuration, universally synchronized global leaderboards.
+  - **Secure Server-Side Proxying**: Solved browser mixed-content restrictions (`http://` vs `https://`) by performing cloud updates server-side while hiding credentials from client code.
+  - **Vite Dev Server Integration (`vite.config.js`)**: Configured local development middleware so `/api/leaderboard` behaves identically in local development and production.
+  - **Instant Live Synchronization**: Newly submitted commander scores are saved locally and immediately synced globally so all players worldwide see updated rankings upon opening the leaderboard.
 
 - **Physics Engine Overhaul: Curvature Roll-Off & Unstable Equilibrium Apex Break**:
   - **The "Weird Stacking" Physics Problem**: Previously, spherical celestial bodies could land vertically atop one another and balance in an unnatural, static vertical totem pole because vertical contact normals generated zero horizontal acceleration ($F_x = 0$).

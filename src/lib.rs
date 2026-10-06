@@ -271,6 +271,7 @@ pub async fn game_main() {
     // Sector completion celebration
     let mut sector_complete_timer = 0.0f32;
     let earned_stars = 0u8;
+    let mut last_pointer_pos = Vec2::new(VIRTUAL_WIDTH * 0.5, VIRTUAL_HEIGHT * 0.5);
 
     // ─────────────────────────────────────────────────────────────────────────
     //  MAIN LOOP
@@ -289,21 +290,34 @@ pub async fn game_main() {
         let vm = Vec2::new((mx - ox) / scale, (my - oy) / scale);
 
         let touch_list = touches();
-        let ptr = if let Some(t) = touch_list.first() {
-            Vec2::new((t.position.x - ox) / scale, (t.position.y - oy) / scale)
-        } else {
-            vm
-        };
-
-        let mouse_pressed = is_mouse_button_pressed(MouseButton::Left);
-        let mouse_down = is_mouse_button_down(MouseButton::Left);
-        let mouse_released = is_mouse_button_released(MouseButton::Left);
+        let dpi = macroquad::miniquad::window::dpi_scale().max(1.0);
 
         let touch_started = touch_list.iter().any(|t| t.phase == TouchPhase::Started);
         let touch_ended = touch_list.iter().any(|t| t.phase == TouchPhase::Ended);
         let touch_down = !touch_list.is_empty();
 
-        let tap = mouse_pressed || touch_started;
+        let mouse_pressed = is_mouse_button_pressed(MouseButton::Left);
+        let mouse_down = is_mouse_button_down(MouseButton::Left);
+        let mouse_released = is_mouse_button_released(MouseButton::Left);
+
+        // Normalize touch coordinate by dpi_scale so it aligns with sw/sh viewport space
+        let current_ptr = if let Some(t) = touch_list.first() {
+            let tx = t.position.x / dpi;
+            let ty = t.position.y / dpi;
+            Vec2::new((tx - ox) / scale, (ty - oy) / scale)
+        } else if mouse_pressed || mouse_down || mouse_released || (mx != 0.0 || my != 0.0) {
+            vm
+        } else {
+            last_pointer_pos
+        };
+
+        if mouse_pressed || mouse_down || touch_down || touch_started || touch_ended {
+            last_pointer_pos = current_ptr;
+        }
+
+        let ptr = current_ptr;
+
+        let tap = mouse_pressed || touch_started || touch_ended;
         let is_held = mouse_down || touch_down;
         let just_released = mouse_released || touch_ended;
 

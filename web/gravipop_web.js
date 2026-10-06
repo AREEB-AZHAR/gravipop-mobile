@@ -106,37 +106,51 @@
     }
 
     async function doLeaderboardRefresh() {
-        if (!isConfigured()) {
-            leaderboardDataJson = JSON.stringify(getLocalLeaderboard());
-            leaderboardStatus = "Commander Records Active";
-            return;
-        }
         if (isFetching) return;
         isFetching = true;
         leaderboardStatus = "Refreshing leaderboard...";
         try {
-            const session = await ensureSession();
-            const token = session?.access_token || SUPABASE_KEY;
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_gravipop_leaderboard`, {
-                method: "POST",
-                headers: {
-                    "apikey": SUPABASE_KEY,
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                },
-                body: JSON.stringify({ p_limit: 20 })
-            });
-            if (!res.ok) {
-                const err = await res.text();
-                leaderboardStatus = `Error ${res.status}: ${err}`;
-                return;
+            if (isConfigured()) {
+                const session = await ensureSession();
+                const token = session?.access_token || SUPABASE_KEY;
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_gravipop_leaderboard`, {
+                    method: "POST",
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({ p_limit: 20 })
+                });
+                if (!res.ok) {
+                    const err = await res.text();
+                    leaderboardStatus = `Error ${res.status}: ${err}`;
+                    return;
+                }
+                const data = await res.json();
+                leaderboardDataJson = JSON.stringify(data);
+                leaderboardStatus = "Global Leaderboard Synchronized";
+            } else {
+                // Shared global cloud leaderboard endpoint
+                const res = await fetch("/api/leaderboard", {
+                    method: "GET",
+                    headers: { "Accept": "application/json" }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        leaderboardDataJson = JSON.stringify(data);
+                        leaderboardStatus = "Global Leaderboard Synchronized";
+                        return;
+                    }
+                }
+                leaderboardDataJson = JSON.stringify(getLocalLeaderboard());
+                leaderboardStatus = "Commander Records Active";
             }
-            const data = await res.json();
-            leaderboardDataJson = JSON.stringify(data);
-            leaderboardStatus = "";
         } catch (err) {
-            leaderboardStatus = `Network error: ${err.message || err}`;
+            leaderboardDataJson = JSON.stringify(getLocalLeaderboard());
+            leaderboardStatus = "Records Loaded (Offline)";
         } finally {
             isFetching = false;
         }
@@ -149,32 +163,41 @@
             return;
         }
         saveToLocalLeaderboard(displayName, score);
-        if (!isConfigured()) {
-            leaderboardStatus = `✓ Saved score ${score} for ${displayName}!`;
-            return;
-        }
         leaderboardStatus = "Submitting score to global leaderboard...";
         try {
-            const session = await ensureSession();
-            const token = session?.access_token || SUPABASE_KEY;
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_gravipop_score`, {
-                method: "POST",
-                headers: {
-                    "apikey": SUPABASE_KEY,
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ p_display_name: displayName, p_score: score })
-            });
-            if (!res.ok) {
-                const err = await res.text();
-                leaderboardStatus = `Saved locally! (Cloud error ${res.status})`;
-                return;
+            if (isConfigured()) {
+                const session = await ensureSession();
+                const token = session?.access_token || SUPABASE_KEY;
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_gravipop_score`, {
+                    method: "POST",
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ p_display_name: displayName, p_score: score })
+                });
+                if (!res.ok) {
+                    const err = await res.text();
+                    leaderboardStatus = `Saved locally! (Cloud error ${res.status})`;
+                    return;
+                }
+            } else {
+                // Post to global shared leaderboard API
+                const res = await fetch("/api/leaderboard", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ display_name: displayName, high_score: score })
+                });
+                if (!res.ok) {
+                    leaderboardStatus = `Saved locally! (HTTP ${res.status})`;
+                    return;
+                }
             }
             leaderboardStatus = `✓ Score ${score} submitted globally!`;
             await doLeaderboardRefresh();
         } catch (err) {
-            leaderboardStatus = `Saved locally! (Cloud sync: offline)`;
+            leaderboardStatus = "Saved locally! (Cloud sync: offline)";
         }
     }
 
@@ -275,7 +298,7 @@
 
             // ── Leaderboard FFI ──
             importObject.env.gravipop_leaderboard_configured = function () {
-                return isConfigured() ? 1 : 0;
+                return 1;
             };
 
             importObject.env.gravipop_leaderboard_refresh = function () {

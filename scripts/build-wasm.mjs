@@ -57,7 +57,23 @@ if (bundleSource && existsSync(bundleSource)) {
 // Apply strict mode & high-DPI sharpness fixes
 bundleContent = bundleContent
   .replace("register_plugin=function(e)", "window.register_plugin=function(e)")
-  .replace("function dpi_scale(){return high_dpi?window.devicePixelRatio||1:1}", "function dpi_scale(){return window.devicePixelRatio||1}");
+  .replace("function dpi_scale(){return high_dpi?window.devicePixelRatio||1:1}", "function dpi_scale(){return window.devicePixelRatio||1}")
+  .replace(
+    'wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_BEGAN,t.identifier,n.x,n.y)}})',
+    'wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_BEGAN,t.identifier,n.x,n.y),wasm_exports.mouse_move(Math.floor(n.x),Math.floor(n.y)),wasm_exports.mouse_down(n.x,n.y,0)}})'
+  )
+  .replace(
+    'wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_MOVED,t.identifier,n.x,n.y)}})',
+    'wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_MOVED,t.identifier,n.x,n.y),wasm_exports.mouse_move(Math.floor(n.x),Math.floor(n.y))}})'
+  )
+  .replace(
+    'wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_ENDED,t.identifier,n.x,n.y)}})',
+    'wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_ENDED,t.identifier,n.x,n.y),wasm_exports.mouse_up(n.x,n.y,0)}})'
+  )
+  .replace(
+    'wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_CANCELED,t.identifier,n.x,n.y)}})',
+    'wasm_exports.touch(SAPP_EVENTTYPE_TOUCHES_CANCELED,t.identifier,n.x,n.y),wasm_exports.mouse_up(n.x,n.y,0)}})'
+  );
 
 // Sync destinations
 for (const dir of [publicRoot, webRoot]) {

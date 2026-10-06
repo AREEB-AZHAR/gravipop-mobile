@@ -9,7 +9,7 @@ pub enum GameOverAction {
     WatchAdDoubleStardust,
     Restart,
     OpenShop,
-    SubmitLeaderboard,
+    SaveScore,
 }
 
 pub struct GameOverModal;
@@ -109,21 +109,21 @@ impl GameOverModal {
             Color::new(0.40, 0.35, 0.60, 0.45),
         );
 
-        dtx(
+        dcx(
             "FINAL SCORE",
-            cx2 + 36.0,
+            cx,
             py + 36.0,
             18.0,
             Color::new(0.70, 0.75, 0.90, 0.85),
             font,
         );
         let sc = score.to_string();
-        dtx(&sc, cx2 + 36.0, py + 86.0, 50.0, WHITE, font);
+        dcx(&sc, cx, py + 86.0, 50.0, WHITE, font);
 
         if score >= high_score && score > 0 {
-            dtx(
+            dcx(
                 "NEW HIGH SCORE!",
-                cx2 + 36.0,
+                cx,
                 py + 118.0,
                 18.0,
                 Color::new(1.0, 0.88, 0.20, 1.0),
@@ -131,9 +131,9 @@ impl GameOverModal {
             );
         } else {
             let ht = format!("BEST {}", high_score);
-            dtx(
+            dcx(
                 &ht,
-                cx2 + 36.0,
+                cx,
                 py + 118.0,
                 18.0,
                 Color::new(0.70, 0.70, 0.82, 0.75),
@@ -141,21 +141,25 @@ impl GameOverModal {
             );
         }
 
-        // Stardust badge in plaque
-        draw_vector_gem(
-            cx2 + 48.0,
-            py + 140.0,
-            18.0,
-            Color::new(0.35, 0.85, 1.0, 1.0),
-        );
+        // Center the gem and reward as a single result detail.
         let dust_lbl = if stardust_doubled {
             format!("+{} STARDUST (DOUBLED!)", stardust_earned)
         } else {
             format!("+{} STARDUST", stardust_earned)
         };
+        let dust_dim = measure_text(&dust_lbl, font, 20, 1.0);
+        let icon_size = 18.0;
+        let detail_gap = 8.0;
+        let detail_x = cx - (icon_size + detail_gap + dust_dim.width) * 0.5;
+        draw_vector_gem(
+            detail_x + icon_size * 0.5,
+            py + 139.0,
+            icon_size,
+            Color::new(0.35, 0.85, 1.0, 1.0),
+        );
         dtx(
             &dust_lbl,
-            cx2 + 66.0,
+            detail_x + icon_size + detail_gap,
             py + 146.0,
             20.0,
             Color::new(0.42, 0.90, 1.0, 1.0),
@@ -163,9 +167,9 @@ impl GameOverModal {
         );
 
         // Public leaderboard name prompt shown after every finished run.
-        dtx(
+        dcx(
             "PUBLIC LEADERBOARD NAME",
-            cx2 + 22.0,
+            cx,
             py + 184.0,
             17.0,
             Color::new(0.60, 0.88, 1.0, 1.0),
@@ -191,9 +195,9 @@ impl GameOverModal {
         } else {
             public_name
         };
-        dtx(
+        dcx(
             shown_name,
-            cx2 + 30.0,
+            cx,
             py + 224.0,
             19.0,
             if public_name.is_empty() {
@@ -204,9 +208,9 @@ impl GameOverModal {
             font,
         );
         if !leaderboard_status.is_empty() {
-            dtx(
+            dcx(
                 leaderboard_status,
-                cx2 + 22.0,
+                cx,
                 py + 266.0,
                 15.0,
                 Color::new(1.0, 0.68, 0.42, 1.0),
@@ -229,7 +233,7 @@ impl GameOverModal {
         );
         draw_rectangle_lines(submit_x, submit_y, cw - 36.0, 52.0, 1.5, WHITE);
         dcx(
-            "SUBMIT SCORE & NAME",
+            "SAVE SCORE & RETURN HOME",
             cx,
             submit_y + 34.0,
             20.0,
@@ -237,7 +241,7 @@ impl GameOverModal {
             font,
         );
         if (submit_hov && mouse_clicked) || is_key_pressed(KeyCode::Enter) {
-            action = GameOverAction::SubmitLeaderboard;
+            action = GameOverAction::SaveScore;
         }
 
         // Buttons

@@ -72,6 +72,22 @@ pub fn hit(pos: Vec2, x: f32, y: f32, w: f32, h: f32) -> bool {
     pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h
 }
 
+fn validate_public_name(value: &str) -> Result<String, &'static str> {
+    let name = value.trim();
+    if name.chars().count() < 3 {
+        Err("Enter at least 3 characters.")
+    } else if name.chars().count() > 20 {
+        Err("Name is limited to 20 characters.")
+    } else if !name
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, ' ' | '_' | '-' | '.'))
+    {
+        Err("Use letters, numbers, spaces, dots, dashes or underscores.")
+    } else {
+        Ok(name.to_string())
+    }
+}
+
 /// The drop guide is a stream of falling light instead of a static laser.  It
 /// communicates both the selected planet's colour and the direction of travel.
 fn draw_drop_stream(x: f32, start_y: f32, end_y: f32, color: Color, active: bool) {
@@ -647,7 +663,7 @@ pub async fn game_main() {
             // ── Sector Complete ──────────────────────────────────────────────
             GameState::SectorComplete => {
                 sector_complete_timer += dt;
-                if tap && hit(ptr, 90.0, 680.0, 540.0, 48.0) {
+                if tap && hit(ptr, 90.0, 674.0, 540.0, 48.0) {
                     name_focused = true;
                 }
                 if name_focused {
@@ -669,8 +685,7 @@ pub async fn game_main() {
                 // Next Sector button
                 if btn_avail
                     && (tap && hit(ptr, cx - 150.0, nx_y, 300.0, 66.0)
-                        || is_key_pressed(KeyCode::Space)
-                        || is_key_pressed(KeyCode::Enter))
+                        || is_key_pressed(KeyCode::Space))
                 {
                     current_sector += 1;
                     let sec = &sectors[current_sector];
@@ -1349,9 +1364,9 @@ pub async fn game_main() {
                 } else {
                     &save_data.public_name
                 };
-                draw_txt(
+                draw_centered(
                     shown_name,
-                    108.0,
+                    cx,
                     705.0,
                     19.0,
                     if save_data.public_name.is_empty() {
@@ -1384,8 +1399,8 @@ pub async fn game_main() {
                     },
                 );
                 draw_rectangle_lines(180.0, 752.0, 360.0, 54.0, 1.5, WHITE);
-                draw_centered("SUBMIT SCORE & NAME", cx, 787.0, 19.0, WHITE, f);
-                sector_submit = submit_hover && tap && !save_data.public_name.trim().is_empty();
+                draw_centered("SAVE SCORE & RETURN HOME", cx, 787.0, 19.0, WHITE, f);
+                sector_submit = submit_hover && tap;
 
                 // Next Sector button
                 let nx_y = VIRTUAL_HEIGHT * 0.65;
@@ -1496,7 +1511,7 @@ pub async fn game_main() {
                     f,
                 );
                 if web_submit {
-                    go_action = GameOverAction::SubmitLeaderboard;
+                    go_action = GameOverAction::SaveScore;
                 }
             }
 
@@ -1562,39 +1577,39 @@ pub async fn game_main() {
             GameOverAction::OpenShop => {
                 game_state = GameState::Shop;
             }
-            GameOverAction::SubmitLeaderboard => {
-                let name = save_data.public_name.trim();
-                if name.chars().count() < 3 {
-                    leaderboard_status = "Enter at least 3 characters.".to_string();
-                } else if name.chars().count() > 20 {
-                    leaderboard_status = "Name is limited to 20 characters.".to_string();
-                } else if !name
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, ' ' | '_' | '-' | '.'))
-                {
-                    leaderboard_status =
-                        "Use letters, numbers, spaces, dots, dashes or underscores.".to_string();
-                } else {
-                    let name = name.to_string();
-                    let _ = save_mgr.save(&save_data);
-                    leaderboard.submit(&name, current_score).await;
-                    leaderboard_status = leaderboard.status.clone();
-                    game_state = GameState::MainMenu;
+            GameOverAction::SaveScore => {
+                match validate_public_name(&save_data.public_name) {
+                    Err(message) => leaderboard_status = message.to_string(),
+                    Ok(name) => match save_mgr.save(&save_data) {
+                        Err(_) => {
+                            leaderboard_status =
+                                "Could not save. Check storage access and try again.".to_string();
+                        }
+                        Ok(()) => {
+                            leaderboard.submit(&name, current_score).await;
+                            leaderboard_status = leaderboard.status.clone();
+                            game_state = GameState::MainMenu;
+                        }
+                    },
                 }
             }
             GameOverAction::None => {}
         }
 
         if sector_submit || (web_submit && game_state == GameState::SectorComplete) {
-            let name = save_data.public_name.trim();
-            if name.chars().count() < 3 {
-                leaderboard_status = "Enter at least 3 characters.".to_string();
-            } else {
-                let name = name.to_string();
-                let _ = save_mgr.save(&save_data);
-                leaderboard.submit(&name, current_score).await;
-                leaderboard_status = leaderboard.status.clone();
-                game_state = GameState::MainMenu;
+            match validate_public_name(&save_data.public_name) {
+                Err(message) => leaderboard_status = message.to_string(),
+                Ok(name) => match save_mgr.save(&save_data) {
+                    Err(_) => {
+                        leaderboard_status =
+                            "Could not save. Check storage access and try again.".to_string();
+                    }
+                    Ok(()) => {
+                        leaderboard.submit(&name, current_score).await;
+                        leaderboard_status = leaderboard.status.clone();
+                        game_state = GameState::MainMenu;
+                    }
+                },
             }
         }
 

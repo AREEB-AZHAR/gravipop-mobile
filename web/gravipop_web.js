@@ -246,7 +246,6 @@
             importObject.env.gravipop_sync_name_input = function (show, x, y, w, h, scoreHigh, scoreLow, initPtr, initLen, outPtr, maxLen) {
                 const container = document.getElementById("name-input-container");
                 const input = document.getElementById("leaderboard-name");
-                const submitBtn = document.getElementById("leaderboard-submit-btn");
                 if (!input) return -1;
 
                 if (!input.dataset.bound) {
@@ -258,14 +257,6 @@
                         }
                     });
                 }
-                if (submitBtn && !submitBtn.dataset.bound) {
-                    submitBtn.dataset.bound = "1";
-                    submitBtn.addEventListener("click", (e) => {
-                        e.preventDefault();
-                        submitRequested = true;
-                    });
-                }
-
                 const targetEl = container || input;
                 if (!show) {
                     submitRequested = false;
@@ -280,7 +271,7 @@
                 const ox = (width - 720 * scale) * 0.5;
                 const oy = (height - 1280 * scale) * 0.5;
 
-                targetEl.style.display = "flex";
+                targetEl.style.display = "block";
                 targetEl.style.position = "absolute";
                 targetEl.style.left = `${ox + x * scale}px`;
                 targetEl.style.top = `${oy + y * scale}px`;

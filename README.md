@@ -19,6 +19,19 @@
 
 ## 🚀 Recent Accomplishments & System Upgrades
 
+- **Unified End-Run Save Flow & Centered Results**:
+  - Removed the duplicate HTML submit button beside the callsign field. Game Over and Sector Complete now present one clear primary action: **Save Score & Return Home**; pressing `Enter` performs the same action.
+  - Centered the final score, best-score state, stardust reward, player name, and validation/status text so both result screens share one readable hierarchy on desktop and mobile.
+  - Reused one callsign validator on every result screen, persisted the player save before leaderboard submission, and kept the player on the result screen with a recovery message if validation or local storage fails.
+
+- **Progressive Large-Shape Drop Pool**:
+  - Expanded the merge chain from 10 to 13 celestial forms with the **Nebula**, **Quasar**, and **Cosmic Core**, each with a distinct procedural vector silhouette.
+  - Higher tiers unlock from score milestones with a deliberately low initial drop weight. Their frequency grows gradually as the run advances while small bodies remain the majority of drops.
+
+- **Vercel Web Analytics**:
+  - Installed the official `@vercel/analytics` client and initialized `inject()` once in the Vite entry point.
+  - Production deployments now report privacy-friendly page views and visitors to the Vercel Analytics dashboard after the site receives traffic.
+
 - **Mobile Canvas Touch Input Normalization (100% Resolved)**:
   - **Root Cause of Unresponsive Mobile Buttons**: In Macroquad's WebAssembly backend, `touches()` delivers coordinates in raw physical device pixels (`clientX * dpi_scale`), whereas screen bounds (`screen_width()`, `screen_height()`) and `mouse_position()` are already divided by `dpi_scale` (CSS viewport pixels). On modern mobile devices with high pixel ratios (Retina DPR $2.0$ to $3.0+$), `touches()` coordinates were 2× to 3× offset, placing the interaction pointer thousands of pixels off the canvas and causing all hit tests on the **Start Game**, **Cosmetics Store**, and **Global Leaderboard** buttons to fail.
   - **DPI Normalization in Rust (`src/lib.rs`)**: Divided `t.position` by `macroquad::miniquad::window::dpi_scale().max(1.0)` so touch coordinates align pixel-for-pixel with virtual game coordinates.
@@ -49,9 +62,9 @@
   - **Correct Camera Projection**: Configured `Camera2D` with positive zoom (`vec2(2.0 / VIRTUAL_WIDTH, 2.0 / VIRTUAL_HEIGHT)`) and `flip_y: false` to ensure vector graphics, text, and celestial bodies render 100% upright and razor-sharp on both desktop and mobile.
   - **CSS Sub-Pixel Crisp Scaling**: Added `image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;` to eliminate browser resampling blur.
 
-- **Game Over Callsign Input Alignment & Multi-Tier Submit Flow**:
+- **Game Over Callsign Input Alignment & Unified Save Flow**:
   - **Sub-Pixel Coordinate Alignment**: Resolved the misplaced name input field. The HTML input was previously offset by `rect.left` (+300px sidebar width) while already inside a `position: relative` canvas wrapper. By binding coordinates directly to `ox + x * scale` and `oy + y * scale`, the callsign input field aligns pixel-for-pixel over the modal prompt.
-  - **DOM & Canvas Submit Mechanics**: Created a dedicated `#name-input-container` with an integrated `#leaderboard-submit-btn` and `Enter` key listener. Players can submit callsigns via the glowing DOM button, the keyboard `Enter` key, or the canvas button.
+  - **One Primary Action**: The DOM overlay contains only the full-width callsign input. The centered canvas action validates and saves the callsign, records the score, and returns home; the `Enter` key routes through that exact same action.
   - **Offline & Local Leaderboard Fallback**: When Supabase credentials are not configured, scores are instantly validated and saved to `localStorage` (`gravipop.local_leaderboard`) with immediate status confirmation (`"✓ Score recorded to commander records!"`). When Supabase is configured, scores synchronize to the global cloud leaderboard.
 
 - **Android Studio & Eclipse Buildship Gradle Integration**:
@@ -63,7 +76,7 @@
   - **Zero-Friction Macroquad WASM Integration**: Eliminated the fatal `TypeError: Import #1 "__wbindgen_placeholder__"` crash caused by mixing `wasm-bindgen` with Macroquad. Implemented a clean, zero-overhead Web FFI bridge (`src/core/web_bridge.rs` & `web/gravipop_web.js`) utilizing Miniquad's native plugin architecture.
   - **Strict-Mode Loader Fix**: Fixed the upstream strict-mode `ReferenceError: register_plugin is not defined` bug in Macroquad's bundled `mq_js_bundle.js`, ensuring 100% clean browser console execution with zero errors or warnings.
   - **Ultra-Premium Cosmic Design System**: Surrounding the WebGL game canvas is a responsive glassmorphic dashboard:
-    - **Celestial Codex (Left Wing)**: Live interactive cards detailing all 10 celestial tiers (Asteroid to Singularity), score yields, and cosmic lore.
+    - **Celestial Codex (Left Wing)**: Live interactive cards detailing all 13 celestial tiers (Asteroid to Cosmic Core), score yields, and cosmic lore.
     - **Mission Control (Right Wing)**: Keyboard shortcuts cheatsheet (`←`/`→`/`A`/`D`, `Space`, `1`, `2`, `P`/`Esc`, `F` for fullscreen) and live engine specifications.
     - **Header Bar**: Live synchronized Stardust balance and High Score pill trackers reading in real-time from `localStorage`.
     - **Mobile Responsive Drawers**: On mobile viewports (< 1180px), side wings gracefully tuck away into floating glassmorphic buttons so the game canvas claims 100% full-screen immersive focus.
@@ -74,7 +87,7 @@
   - **Zero Floor & Wall Tunneling**: Implemented post-solver boundary clamping (`JAR_LEFT`, `JAR_RIGHT`, `JAR_BOTTOM`) for all bodies. Settled bodies at the bottom of the container are held firmly above the container line without a single pixel protruding.
   - **Micro-Velocity Sleep**: Added resting velocity damping to prevent jitter at the bottom of heavy stacks.
 
-- **Celestial Tier Visual Redesign (10 Unique Visual Identities)**:
+- **Celestial Tier Visual Redesign (13 Unique Visual Identities)**:
   - **Asteroid**: Craggy dark basalt rock with 3 distinct crater pits and molten amber mineral veins.
   - **Moon**: Silvery regolith with dark lunar maria basalt seas, rayed impact craters, and crisp terminator rim lighting.
   - **Earth (Terrestrial)**: Deep azure oceans, emerald continental landmasses, polar ice caps, and dynamic swirling atmospheric cloud spirals.
@@ -85,6 +98,9 @@
   - **Blue Supergiant**: Blinding white-hot thermonuclear core with 8 radiant cardinal starburst light rays and plasma filaments.
   - **Pulsar (Magnetar)**: Ultra-dense violet neutron core with equatorial magnetic flux loops and **dual rotating relativistic radiation jets**.
   - **Singularity**: Absolute pitch-black event horizon encircled by an **Einstein gravitational lensing photon ring** and an iridescent violet/gold relativistic accretion disk with Doppler boosting.
+  - **Nebula**: A magenta rosette of orbiting cloud lobes surrounding a luminous stellar nursery.
+  - **Quasar**: A rotating diamond frame around a brilliant turquoise core and white photon ring.
+  - **Cosmic Core**: A golden hexagonal shell with six radial energy beams and a white-hot center.
 
 - **Universal Cross-Ecosystem Normalization**:
   - Dynamic virtual camera projection (`720 × 1280`) with automatic pillarbox/letterbox scaling. Preserves sharp aspect ratio across mobile displays and high-DPI desktop monitors.
@@ -140,6 +156,7 @@ GraviPop is fully configured for zero-configuration cloud deployment:
 1. **Pre-Compiled WASM in `public/`**: Cloud platforms (Vercel, Netlify) build using standard Node.js containers without requiring a native Rust/Cargo toolchain. The pre-compiled WebAssembly binary and game assets reside in `public/` and are automatically copied to `dist/` by Vite during the build.
 2. **`vercel.json` Configuration**: Configured with `framework: "vite"`, `outputDirectory: "dist"`, and dedicated `application/wasm` headers.
 3. **Continuous Deployment**: Any push to `master` triggers automatic build and instant global CDN deployment on Vercel.
+4. **Web Analytics**: `src/web/main.js` initializes `@vercel/analytics` once. After deploying, visit the production site and allow roughly 30 seconds for the first page-view request to appear in the Vercel Analytics dashboard.
 
 ### 6. Preview Production Build
 ```bash
@@ -147,7 +164,7 @@ npm run preview
 ```
 Runs a local preview of the production build at `http://localhost:8080`.
 
-### 6. (Optional) Supabase Global Leaderboard Configuration
+### 7. (Optional) Supabase Global Leaderboard Configuration
 The web app features persistent anonymous player identity and global leaderboards. It runs out-of-the-box in local mode without credentials (saving scores to `localStorage`). To link a live Supabase leaderboard:
 1. Create a Supabase project and enable Anonymous Sign-Ins in Auth settings.
 2. Apply `supabase/migrations/202610050001_leaderboard.sql` in the Supabase SQL editor.
@@ -176,7 +193,7 @@ The web app features persistent anonymous player identity and global leaderboard
    ```bash
    cargo test
    ```
-   *(All 18 unit, physics, and progression tests pass with zero warnings).*
+   *(All 20 unit, physics, and progression tests pass with zero warnings).*
 
 ---
 
@@ -245,7 +262,7 @@ gravipop-mobile/
 │   │   ├── web_bridge.rs               # Zero-overhead extern "C" WebAssembly FFI bridge
 │   │   └── mod.rs
 │   ├── physics/
-│   │   ├── celestial_tier.rs           # 10 cosmic tiers (Asteroid → Singularity)
+│   │   ├── celestial_tier.rs           # 13 cosmic tiers (Asteroid → Cosmic Core)
 │   │   ├── body.rs                     # Verlet integration, restitution, angular spin
 │   │   ├── collision.rs                # Surface contact detector & slope perturbation solver
 │   │   └── mod.rs
@@ -270,8 +287,8 @@ gravipop-mobile/
 │   │   ├── mock_ad_overlay.rs          # Ad viewing simulation overlay
 │   │   └── mod.rs
 │   └── web/                            # Modern Vite web application UI shell
-│       ├── codex.js                    # Metadata for all 10 celestial tiers
-│       ├── main.js                     # HUD reactivity, fullscreen API, mobile drawers
+│       ├── codex.js                    # Metadata for all 13 celestial tiers
+│       ├── main.js                     # Analytics, HUD reactivity, fullscreen, drawers
 │       └── style.css                   # Glassmorphic cosmic design system
 ├── index.html                          # Root Vite HTML with responsive game viewport
 ├── vite.config.js                      # Vite build & dev server configuration

@@ -360,12 +360,10 @@ html, body {
   position: absolute;
   z-index: 25;
   box-sizing: border-box;
-  align-items: center;
-  gap: 8px;
 }
 
 #leaderboard-name {
-  flex: 1;
+  width: 100%;
   height: 100%;
   box-sizing: border-box;
   padding: 0 14px;
@@ -374,6 +372,7 @@ html, body {
   background: rgba(14, 15, 34, 0.95);
   color: #ffffff;
   font: 18px 'Outfit', system-ui, sans-serif;
+  text-align: center;
   outline: none;
   box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -382,31 +381,6 @@ html, body {
 #leaderboard-name:focus {
   border-color: #38bdf8;
   box-shadow: 0 0 24px rgba(56, 189, 248, 0.6);
-}
-
-#leaderboard-submit-btn {
-  height: 100%;
-  padding: 0 16px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 6px;
-  background: linear-gradient(135deg, #134e7a, #0ea5e9);
-  color: #ffffff;
-  font: 600 14px 'Outfit', system-ui, sans-serif;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  white-space: nowrap;
-  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.4);
-  transition: transform 0.15s, background 0.2s, box-shadow 0.2s;
-}
-
-#leaderboard-submit-btn:hover {
-  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
-  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.6);
-  transform: translateY(-1px);
-}
-
-#leaderboard-submit-btn:active {
-  transform: translateY(0);
 }
 
 /* ── Controls Wing Cards ── */

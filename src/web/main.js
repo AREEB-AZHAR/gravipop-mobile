@@ -1,4 +1,7 @@
+import { inject } from "@vercel/analytics";
 import { CELESTIAL_TIERS } from "./codex.js";
+
+inject();
 
 // Populate Codex list
 const codexContainer = document.getElementById("codex-list");

@@ -77,9 +77,38 @@
         return newSession;
     }
 
+    function getLocalLeaderboard() {
+        try {
+            const raw = localStorage.getItem("gravipop.local_leaderboard");
+            if (raw) return JSON.parse(raw);
+        } catch (_) {}
+        return [
+            { display_name: "Nova-Explorer", high_score: 1250 },
+            { display_name: "AstroPioneer", high_score: 840 },
+            { display_name: "StellarWanderer", high_score: 420 },
+        ];
+    }
+
+    function saveToLocalLeaderboard(name, score) {
+        let entries = getLocalLeaderboard();
+        const existingIdx = entries.findIndex(e => e.display_name === name);
+        if (existingIdx >= 0) {
+            entries[existingIdx].high_score = Math.max(entries[existingIdx].high_score, score);
+        } else {
+            entries.push({ display_name: name, high_score: score });
+        }
+        entries.sort((a, b) => b.high_score - a.high_score);
+        entries = entries.slice(0, 20);
+        try {
+            localStorage.setItem("gravipop.local_leaderboard", JSON.stringify(entries));
+        } catch (_) {}
+        leaderboardDataJson = JSON.stringify(entries);
+    }
+
     async function doLeaderboardRefresh() {
         if (!isConfigured()) {
-            leaderboardStatus = "Leaderboard is not configured yet";
+            leaderboardDataJson = JSON.stringify(getLocalLeaderboard());
+            leaderboardStatus = "Commander Records Active";
             return;
         }
         if (isFetching) return;
@@ -114,8 +143,17 @@
     }
 
     async function doLeaderboardSubmit(displayName, score) {
-        if (!isConfigured()) return;
-        leaderboardStatus = "Submitting score...";
+        displayName = (displayName || "").trim();
+        if (!displayName || displayName.length < 3) {
+            leaderboardStatus = "Enter at least 3 characters.";
+            return;
+        }
+        saveToLocalLeaderboard(displayName, score);
+        if (!isConfigured()) {
+            leaderboardStatus = `✓ Saved score ${score} for ${displayName}!`;
+            return;
+        }
+        leaderboardStatus = "Submitting score to global leaderboard...";
         try {
             const session = await ensureSession();
             const token = session?.access_token || SUPABASE_KEY;
@@ -130,14 +168,17 @@
             });
             if (!res.ok) {
                 const err = await res.text();
-                leaderboardStatus = `Submit error ${res.status}: ${err}`;
+                leaderboardStatus = `Saved locally! (Cloud error ${res.status})`;
                 return;
             }
+            leaderboardStatus = `✓ Score ${score} submitted globally!`;
             await doLeaderboardRefresh();
         } catch (err) {
-            leaderboardStatus = `Submit error: ${err.message || err}`;
+            leaderboardStatus = `Saved locally! (Cloud sync: offline)`;
         }
     }
+
+    let latestGameScore = 0;
 
     const plugin = {
         name: "gravipop_web",
@@ -179,27 +220,52 @@
             };
 
             // ── DOM Input FFI ──
-            importObject.env.gravipop_sync_name_input = function (show, x, y, w, h, initPtr, initLen, outPtr, maxLen) {
+            importObject.env.gravipop_sync_name_input = function (show, x, y, w, h, scoreHigh, scoreLow, initPtr, initLen, outPtr, maxLen) {
+                const container = document.getElementById("name-input-container");
                 const input = document.getElementById("leaderboard-name");
+                const submitBtn = document.getElementById("leaderboard-submit-btn");
                 if (!input) return -1;
+
+                latestGameScore = Number((BigInt(scoreHigh >>> 0) << 32n) | BigInt(scoreLow >>> 0));
+
+                if (!input.dataset.bound) {
+                    input.dataset.bound = "1";
+                    input.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            doLeaderboardSubmit(input.value, latestGameScore);
+                        }
+                    });
+                }
+                if (submitBtn && !submitBtn.dataset.bound) {
+                    submitBtn.dataset.bound = "1";
+                    submitBtn.addEventListener("click", (e) => {
+                        e.preventDefault();
+                        doLeaderboardSubmit(input.value, latestGameScore);
+                    });
+                }
+
+                const targetEl = container || input;
                 if (!show) {
-                    input.style.display = "none";
+                    targetEl.style.display = "none";
                     return -1;
                 }
+
                 const canvasEl = document.getElementById("glcanvas");
-                const rect = canvasEl ? canvasEl.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-                const width = rect.width;
-                const height = rect.height;
+                const width = canvasEl ? canvasEl.clientWidth : window.innerWidth;
+                const height = canvasEl ? canvasEl.clientHeight : window.innerHeight;
                 const scale = Math.min(width / 720, height / 1280);
                 const ox = (width - 720 * scale) * 0.5;
                 const oy = (height - 1280 * scale) * 0.5;
 
-                input.style.display = "block";
-                input.style.left = `${rect.left + ox + x * scale}px`;
-                input.style.top = `${rect.top + oy + y * scale}px`;
-                input.style.width = `${w * scale}px`;
-                input.style.height = `${h * scale}px`;
-                input.style.fontSize = `${Math.max(12, 19 * scale)}px`;
+                targetEl.style.display = "flex";
+                targetEl.style.position = "absolute";
+                targetEl.style.left = `${ox + x * scale}px`;
+                targetEl.style.top = `${oy + y * scale}px`;
+                targetEl.style.width = `${w * scale}px`;
+                targetEl.style.height = `${h * scale}px`;
+
+                input.style.fontSize = `${Math.max(12, 18 * scale)}px`;
 
                 if (initLen > 0 && initPtr) {
                     input.value = UTF8ToString(initPtr, initLen);

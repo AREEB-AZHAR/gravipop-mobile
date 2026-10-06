@@ -25,11 +25,25 @@ impl CollisionEngine {
                 for j in (i + 1)..bodies.len() {
                     let (left, right) = bodies.split_at_mut(j);
                     let (a, b) = (&mut left[i], &mut right[0]);
-                    let delta = b.pos - a.pos;
+                    let mut delta = b.pos - a.pos;
                     let distance = delta.length();
                     let minimum = a.radius + b.radius;
                     if distance >= minimum {
                         continue;
+                    }
+
+                    // Identify vertical relationship: which body is top and which is bottom
+                    let (top_is_b, top_radius, bottom_radius) = if b.pos.y < a.pos.y {
+                        (true, b.radius, a.radius)
+                    } else {
+                        (false, a.radius, b.radius)
+                    };
+
+                    // Unstable Equilibrium Break: A large planet cannot balance on the sharp apex of a smaller body.
+                    // If nearly vertically centered (|dx| < 3.5px) and top body is significant, apply a slight deterministic nudge.
+                    if delta.x.abs() < 3.5 && (top_radius >= bottom_radius * 0.75) {
+                        let sign = if (a.id ^ b.id) % 2 == 0 { 1.0 } else { -1.0 };
+                        delta.x = if delta.x.abs() < 0.1 { sign * 3.0 } else { delta.x.signum() * 3.0 };
                     }
 
                     let normal = if distance > 0.001 {
@@ -43,8 +57,8 @@ impl CollisionEngine {
                     let inverse_b = 1.0 / b.mass.max(0.001);
                     let inverse_sum = inverse_a + inverse_b;
 
-                    // Small slop and partial correction avoid visible jitter in stacks.
-                    let correction = (overlap - 0.15).max(0.0) * 0.82 / inverse_sum;
+                    // Positional separation with slight slop to prevent jitter
+                    let correction = (overlap - 0.12).max(0.0) * 0.82 / inverse_sum;
                     a.pos -= normal * (correction * inverse_a);
                     b.pos += normal * (correction * inverse_b);
 
@@ -57,13 +71,34 @@ impl CollisionEngine {
                         b.vel += normal * (normal_impulse * inverse_b);
                     }
 
-                    // Friction only removes relative tangent velocity; it never adds
-                    // the arbitrary sideways kicks that made vertical stacks unstable.
+                    // Curvature Roll-Off Dynamics: Downward gravity along the curved contact slope
+                    // exerts a lateral rolling torque (F_roll = g * sin(theta) * cos(theta)).
+                    // Large bodies roll off small bodies instead of magically perching on top.
+                    let (norm_to_top, top_inv, bot_inv) = if top_is_b {
+                        (normal, inverse_b, inverse_a)
+                    } else {
+                        (-normal, inverse_a, inverse_b)
+                    };
+                    let vertical_contact = (-norm_to_top.y).max(0.0);
+                    if vertical_contact > 0.10 {
+                        let size_multiplier = (top_radius / bottom_radius).max(1.0).min(3.2);
+                        let roll_component = norm_to_top.x * vertical_contact;
+                        let roll_impulse = 52.0 * roll_component * size_multiplier;
+                        if top_is_b {
+                            b.vel.x += roll_impulse * (top_inv / inverse_sum);
+                            a.vel.x -= roll_impulse * 0.35 * (bot_inv / inverse_sum);
+                        } else {
+                            a.vel.x += roll_impulse * (top_inv / inverse_sum);
+                            b.vel.x -= roll_impulse * 0.35 * (bot_inv / inverse_sum);
+                        }
+                    }
+
+                    // Rolling friction: Allow spheres to roll smoothly past each other into resting pockets
                     let tangent = relative - normal * normal_speed;
                     let tangent_speed = tangent.length();
                     if tangent_speed > 0.001 {
                         let friction_impulse = (tangent_speed / inverse_sum)
-                            .min(normal_impulse * 0.32 + overlap * 0.08);
+                            .min(normal_impulse * 0.12 + overlap * 0.04);
                         let impulse = tangent / tangent_speed * friction_impulse;
                         a.vel += impulse * inverse_a;
                         b.vel -= impulse * inverse_b;
@@ -275,4 +310,28 @@ mod tests {
         world.step(&mut bodies, 1.0 / 240.0);
         assert!(bodies[0].pos.y > 200.0);
     }
+
+    #[test]
+    fn large_planet_rolls_off_small_planet_unstable_apex() {
+        let small_radius = CelestialTier::Asteroid.radius();
+        let large_radius = CelestialTier::GasGiant.radius();
+        // Place small asteroid at bottom, and massive Gas Giant directly vertically atop it
+        let mut bodies = vec![
+            body(1, CelestialTier::Asteroid, 300.0, 800.0, 1.0),
+            body(2, CelestialTier::GasGiant, 300.0, 800.0 - small_radius - large_radius + 1.0, 1.0),
+        ];
+        let mut world = PhysicsWorld::default();
+        // Simulate several physics steps
+        for _ in 0..60 {
+            world.step(&mut bodies, 1.0 / 60.0);
+        }
+        // The top gas giant must have rolled off horizontally rather than statically perching atop the asteroid
+        let delta_x = (bodies[1].pos.x - bodies[0].pos.x).abs();
+        assert!(
+            delta_x > 8.0,
+            "Large planet should roll off small planet; delta_x was only {}",
+            delta_x
+        );
+    }
 }
+

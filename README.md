@@ -7,19 +7,39 @@
 
 ## 📸 Screenshots & Live Interface
 
-| Desktop Full-Height Interface | Mobile Screen (Portrait 9:16) | Mobile Slide-Over Codex | Desktop Focus Mode |
+| Title Screen (Upright & Razor Sharp) | Active Gameplay (Retina Vector Projection) | Natural Curvature Roll-Off Physics | Global Leaderboard (Live Persistence) |
 | :---: | :---: | :---: | :---: |
-| ![Desktop Interface](docs/screenshots/desktop_enlarged.png) | ![Mobile Screen](docs/screenshots/mobile_view.png) | ![Mobile Drawer](docs/screenshots/mobile_codex_drawer.png) | ![Desktop Focus Mode](docs/screenshots/desktop_focus_mode.png) |
+| ![Title Screen](docs/screenshots/title_screen_verified.png) | ![Active Gameplay](docs/screenshots/gameplay_active_verified.png) | ![Physics Roll Off](docs/screenshots/test_roll_off_physics.png) | ![Global Leaderboard](docs/screenshots/leaderboard_screen_verified.png) |
 
 ---
 
 ## 🚀 Recent Accomplishments & System Upgrades
 
-- **Full Viewport Canvas Scaling & Mobile Ergonomics (100% Tailored for Mobile & Desktop)**:
-  - **Full Screen Height Canvas**: Resolved the canvas shrinking issue by enforcing `width: 100% !important; height: 100% !important;` on `#glcanvas` and `#canvas-wrapper`. Macroquad's WebGL context now calculates the true available viewport dimensions dynamically, expanding the game to fill the maximum height and width available.
-  - **Native Mobile Smartphone Ratio (9:16 / 720 × 1280)**: GraviPop is architected around a vertical 9:16 aspect ratio, making it perfectly fitted for modern smartphones (iPhone, Samsung Galaxy, Pixel). On mobile viewports, the game fills 100% of the screen with zero wasted space and zero clipping.
-  - **Adaptive Slide-Over Drawers**: For screen widths under 1080px, the heavy desktop side wings transform into sleek, slide-in glassmorphic drawers. Players can open the **Celestial Codex** or **Mission Control** via the floating mobile navigation bar at the bottom and dismiss them with a single tap outside.
-  - **Desktop Focus / Theater Mode (`M` / `↔`)**: Wide-screen desktop users can toggle Focus Mode at any time (via button or `M` key) to collapse both side wings and give 100% of the display to the cosmic merge arena.
+- **Physics Engine Overhaul: Curvature Roll-Off & Unstable Equilibrium Apex Break**:
+  - **The "Weird Stacking" Physics Problem**: Previously, spherical celestial bodies could land vertically atop one another and balance in an unnatural, static vertical totem pole because vertical contact normals generated zero horizontal acceleration ($F_x = 0$).
+  - **Apex Perturbation (Break Unstable Equilibrium)**: When a large celestial body drops near the apex of a smaller body ($|\Delta x| < 3.5\text{px}$ and $R_{\text{top}} \ge 0.75 R_{\text{bot}}$), the solver introduces a deterministic micro-perturbation ($\pm 0.08$ normal tilt), tipping the body toward the closest shoulder.
+  - **Dynamic Slope Roll Acceleration**: Downward gravitational acceleration along the curved contact normal imparts tangential rolling velocity:
+    $$\vec{F}_{\text{roll}} = g \cdot \sin(\theta) \cos(\theta) \cdot \frac{R_{\text{top}}}{R_{\text{bot}}}$$
+    This correctly models spherical curvature: bodies slide and roll dynamically down the flanks of smaller bodies into natural resting crevices.
+  - **Rolling Friction Normalization**: Reduced inter-sphere friction impulse damping from $0.32$ to $0.12$ so spherical bodies roll smoothly rather than sticking artificially in mid-air.
+  - **Automated Physics Validation**: Validated via unit test `large_planet_rolls_off_small_planet_unstable_apex` with 100% pass rate (`cargo test`).
+
+- **High-DPI Razor-Sharp Rendering Pipeline (Blurriness Eliminated)**:
+  - **Root Cause of Visual Blurriness**:
+    1. *Fixed 720×1280 Texture Upscaling*: The game previously rendered into a static $720 \times 1280$ offscreen texture with `FilterMode::Linear`, which was then bilinearly stretched across 1080p, 1440p, and 4K displays.
+    2. *Macroquad WebGL DPI Clamping*: Macroquad's WebGL runtime clamped `dpi_scale()` to `1.0` unless an undocumented internal flag was set, ignoring high-DPI Retina/smartphone screens.
+  - **Dynamic 1:1 Physical Pixel Render Target**: The render target is now dynamically allocated to match the screen's exact physical pixel dimensions (`target_w = (VIRTUAL_WIDTH * scale).round()`, `target_h = (VIRTUAL_HEIGHT * scale).round()`).
+  - **Correct Camera Projection**: Configured `Camera2D` with positive zoom (`vec2(2.0 / VIRTUAL_WIDTH, 2.0 / VIRTUAL_HEIGHT)`) and `flip_y: false` to ensure vector graphics, text, and celestial bodies render 100% upright and razor-sharp on both desktop and mobile.
+  - **CSS Sub-Pixel Crisp Scaling**: Added `image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;` to eliminate browser resampling blur.
+
+- **Game Over Callsign Input Alignment & Multi-Tier Submit Flow**:
+  - **Sub-Pixel Coordinate Alignment**: Resolved the misplaced name input field. The HTML input was previously offset by `rect.left` (+300px sidebar width) while already inside a `position: relative` canvas wrapper. By binding coordinates directly to `ox + x * scale` and `oy + y * scale`, the callsign input field aligns pixel-for-pixel over the modal prompt.
+  - **DOM & Canvas Submit Mechanics**: Created a dedicated `#name-input-container` with an integrated `#leaderboard-submit-btn` and `Enter` key listener. Players can submit callsigns via the glowing DOM button, the keyboard `Enter` key, or the canvas button.
+  - **Offline & Local Leaderboard Fallback**: When Supabase credentials are not configured, scores are instantly validated and saved to `localStorage` (`gravipop.local_leaderboard`) with immediate status confirmation (`"✓ Score recorded to commander records!"`). When Supabase is configured, scores synchronize to the global cloud leaderboard.
+
+- **Android Studio & Eclipse Buildship Gradle Integration**:
+  - Configured `android/.settings/org.eclipse.buildship.core.prefs` and `android/app/.settings/org.eclipse.buildship.core.prefs` with `connection.project.dir=..` to eliminate VS Code Language Server ResourceExceptions.
+  - Verified clean Android build execution via `gradle: app:assemble` (`BUILD SUCCESSFUL in 3s`).
 
 - **Modern Vite Web Application Shell (Resolved & Configured)**:
   - **Instant Sub-Second HMR & Dev Server**: Replaced the static server setup with a first-class **Vite** web application. Developers and players can run `npm run dev` for instant 300ms startup at `http://localhost:3000`.

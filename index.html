@@ -56,7 +56,10 @@
       <section id="game-arena">
         <div id="canvas-wrapper">
           <canvas id="glcanvas" tabindex="1"></canvas>
-          <input id="leaderboard-name" type="text" maxlength="20" aria-label="Public leaderboard name">
+          <div id="name-input-container">
+            <input id="leaderboard-name" type="text" maxlength="20" placeholder="Type commander callsign..." autocomplete="nickname" aria-label="Public leaderboard name">
+            <button id="leaderboard-submit-btn" type="button" aria-label="Submit Score">SUBMIT</button>
+          </div>
         </div>
 
         <!-- Floating Mobile Quick Bar -->

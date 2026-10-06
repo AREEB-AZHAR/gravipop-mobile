@@ -129,8 +129,9 @@ fn sync_web_name_input(
     bounds: (f32, f32, f32, f32),
     current: &str,
     initialize: bool,
+    score: u64,
 ) -> Option<String> {
-    crate::core::web_bridge::sync_name_input(show, bounds, current, initialize)
+    crate::core::web_bridge::sync_name_input(show, bounds, current, initialize, score)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -225,11 +226,19 @@ pub async fn game_main() {
     let catalog = EconomyCatalog::new();
     let sectors = all_sectors();
 
-    // ── Virtual Render Target (720 × 1280) ───────────────────────────────────
-    let vt = render_target(VIRTUAL_WIDTH as u32, VIRTUAL_HEIGHT as u32);
+    // ── High-Resolution Render Target (Dynamically matched to native screen buffer)
+    let mut target_w = VIRTUAL_WIDTH as u32;
+    let mut target_h = VIRTUAL_HEIGHT as u32;
+    let mut vt = render_target(target_w, target_h);
     vt.texture.set_filter(FilterMode::Linear);
-    let mut vcam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT));
-    vcam.render_target = Some(vt.clone());
+    let mut vcam = Camera2D {
+        target: vec2(VIRTUAL_WIDTH * 0.5, VIRTUAL_HEIGHT * 0.5),
+        zoom: vec2(2.0 / VIRTUAL_WIDTH, 2.0 / VIRTUAL_HEIGHT),
+        offset: vec2(0.0, 0.0),
+        rotation: 0.0,
+        render_target: Some(vt.clone()),
+        viewport: None,
+    };
 
     // ── Global Session State ─────────────────────────────────────────────────
     let mut game_state = GameState::MainMenu;
@@ -701,7 +710,8 @@ pub async fn game_main() {
             } else {
                 (90.0, 674.0, 540.0, 48.0)
             };
-            if let Some(value) = sync_web_name_input(show, bounds, &save_data.public_name, opening)
+            if let Some(value) =
+                sync_web_name_input(show, bounds, &save_data.public_name, opening, current_score)
             {
                 save_data.public_name = value
                     .chars()
@@ -716,7 +726,25 @@ pub async fn game_main() {
             }
         }
 
-        // ── RENDER ────────────────────────────────────────────────────────────
+        // Recreate high-resolution render target when display dimensions or scale change
+        let current_target_w = ((VIRTUAL_WIDTH * scale).round() as u32).max(720);
+        let current_target_h = ((VIRTUAL_HEIGHT * scale).round() as u32).max(1280);
+        if target_w != current_target_w || target_h != current_target_h {
+            target_w = current_target_w;
+            target_h = current_target_h;
+            vt = render_target(target_w, target_h);
+            vt.texture.set_filter(FilterMode::Linear);
+            vcam = Camera2D {
+                target: vec2(VIRTUAL_WIDTH * 0.5, VIRTUAL_HEIGHT * 0.5),
+                zoom: vec2(2.0 / VIRTUAL_WIDTH, 2.0 / VIRTUAL_HEIGHT),
+                offset: vec2(0.0, 0.0),
+                rotation: 0.0,
+                render_target: Some(vt.clone()),
+                viewport: None,
+            };
+        }
+
+        // ── RENDER (1:1 High-Resolution Projection) ───────────────────────────
         set_camera(&vcam);
         clear_background(Color::new(0.02, 0.02, 0.06, 1.0));
 
@@ -1612,9 +1640,9 @@ pub async fn game_main() {
             MockAdResult::None => {}
         }
 
-        // ── Blit Virtual Canvas to Physical Screen ───────────────────────────
+        // ── Blit High-Resolution Target to Physical Screen ───────────────────
         set_default_camera();
-        clear_background(Color::new(0.02, 0.02, 0.06, 1.0));
+        clear_background(Color::new(0.012, 0.012, 0.03, 1.0));
         draw_texture_ex(
             &vt.texture,
             ox,
@@ -1622,7 +1650,7 @@ pub async fn game_main() {
             WHITE,
             DrawTextureParams {
                 dest_size: Some(vec2(VIRTUAL_WIDTH * scale, VIRTUAL_HEIGHT * scale)),
-                flip_y: true,
+                flip_y: false,
                 ..Default::default()
             },
         );

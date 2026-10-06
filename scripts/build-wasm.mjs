@@ -54,8 +54,10 @@ if (bundleSource && existsSync(bundleSource)) {
   throw new Error("Could not find Macroquad's mq_js_bundle.js.");
 }
 
-// Apply strict mode fix
-bundleContent = bundleContent.replace("register_plugin=function(e)", "window.register_plugin=function(e)");
+// Apply strict mode & high-DPI sharpness fixes
+bundleContent = bundleContent
+  .replace("register_plugin=function(e)", "window.register_plugin=function(e)")
+  .replace("function dpi_scale(){return high_dpi?window.devicePixelRatio||1:1}", "function dpi_scale(){return window.devicePixelRatio||1}");
 
 // Sync destinations
 for (const dir of [publicRoot, webRoot]) {

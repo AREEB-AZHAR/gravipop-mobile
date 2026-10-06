@@ -236,7 +236,7 @@ impl GameOverModal {
             WHITE,
             font,
         );
-        if submit_hov && mouse_clicked && !public_name.trim().is_empty() {
+        if (submit_hov && mouse_clicked) || is_key_pressed(KeyCode::Enter) {
             action = GameOverAction::SubmitLeaderboard;
         }
 

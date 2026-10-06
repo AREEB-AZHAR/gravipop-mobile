@@ -15,6 +15,8 @@ extern "C" {
         y: f32,
         w: f32,
         h: f32,
+        score_high: u32,
+        score_low: u32,
         init_ptr: *const u8,
         init_len: u32,
         out_ptr: *mut u8,
@@ -86,11 +88,14 @@ pub fn sync_name_input(
     bounds: (f32, f32, f32, f32),
     current: &str,
     initialize: bool,
+    score: u64,
 ) -> Option<String> {
     #[cfg(target_arch = "wasm32")]
     {
         let init_bytes = if initialize { current.as_bytes() } else { &[] };
         let mut buf = vec![0u8; 128];
+        let score_high = (score >> 32) as u32;
+        let score_low = (score & 0xffff_ffff) as u32;
         let len = unsafe {
             gravipop_sync_name_input(
                 if show { 1 } else { 0 },
@@ -98,6 +103,8 @@ pub fn sync_name_input(
                 bounds.1,
                 bounds.2,
                 bounds.3,
+                score_high,
+                score_low,
                 init_bytes.as_ptr(),
                 init_bytes.len() as u32,
                 buf.as_mut_ptr(),
@@ -113,7 +120,7 @@ pub fn sync_name_input(
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let _ = (show, bounds, current, initialize);
+        let _ = (show, bounds, current, initialize, score);
         None
     }
 }

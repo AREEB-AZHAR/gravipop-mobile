@@ -351,22 +351,62 @@ html, body {
   display: block;
   outline: none;
   touch-action: none;
-  image-rendering: auto;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
-#leaderboard-name {
+#name-input-container {
   display: none;
   position: absolute;
   z-index: 25;
   box-sizing: border-box;
-  padding: 0 12px;
-  border: 1px solid #74b4f2;
+  align-items: center;
+  gap: 8px;
+}
+
+#leaderboard-name {
+  flex: 1;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 1px solid rgba(116, 180, 242, 0.85);
   border-radius: 6px;
-  background: #121329;
-  color: white;
+  background: rgba(14, 15, 34, 0.95);
+  color: #ffffff;
   font: 18px 'Outfit', system-ui, sans-serif;
   outline: none;
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#leaderboard-name:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.6);
+}
+
+#leaderboard-submit-btn {
+  height: 100%;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  background: linear-gradient(135deg, #134e7a, #0ea5e9);
+  color: #ffffff;
+  font: 600 14px 'Outfit', system-ui, sans-serif;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.4);
+  transition: transform 0.15s, background 0.2s, box-shadow 0.2s;
+}
+
+#leaderboard-submit-btn:hover {
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.6);
+  transform: translateY(-1px);
+}
+
+#leaderboard-submit-btn:active {
+  transform: translateY(0);
 }
 
 /* ── Controls Wing Cards ── */

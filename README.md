@@ -169,9 +169,21 @@ gravipop-mobile/
 │   ├── celestial_atlas.jpg
 │   └── gravipop_icon.jpg
 ├── docs/
-│   └── screenshots/                    # Captured gameplay & web app screenshots
-│       ├── web_app.png
-│       └── gameplay.png
+│   └── screenshots/                    # Captured gameplay & responsive screenshots
+│       ├── desktop_enlarged.png        # Full-height desktop interface
+│       ├── desktop_focus_mode.png      # Theater / Focus mode (100% canvas)
+│       ├── mobile_view.png             # Native 9:16 mobile portrait display
+│       ├── mobile_codex_drawer.png     # Slide-in Celestial Codex mobile drawer
+│       ├── mobile_gameplay.png         # In-game canvas layout on mobile
+│       ├── gameplay.png                # Cosmic particle fusion gameplay
+│       └── web_app.png                 # Initial Vite web app shell
+├── android/                            # Native Android Studio / Gradle project
+│   ├── .settings/                      # Eclipse Buildship IDE configuration
+│   ├── app/                            # Android application module
+│   │   ├── .settings/                  # Module IDE configuration
+│   │   └── build.gradle
+│   ├── build.gradle
+│   └── settings.gradle
 ├── public/                             # Vite static assets (served at root)
 │   ├── assets/
 │   ├── env.js                          # Runtime environment configuration

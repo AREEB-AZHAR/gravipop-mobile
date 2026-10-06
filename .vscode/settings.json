@@ -1,0 +1,15 @@
+{
+  "java.import.gradle.enabled": false,
+  "files.watcherExclude": {
+    "**/android/.gradle/**": true,
+    "**/android/build/**": true,
+    "**/android/app/build/**": true,
+    "**/target/**": true,
+    "**/node_modules/**": true,
+    "**/dist/**": true
+  },
+  "files.exclude": {
+    "**/android/.gradle": true,
+    "**/android/.kotlin": true
+  }
+}

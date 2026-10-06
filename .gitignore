@@ -26,6 +26,4 @@ vite_app_screenshot*.png
 web/gravipop-mobile.wasm
 web/assets/
 web/mq_js_bundle.js
-public/gravipop-mobile.wasm
-public/assets/
-public/mq_js_bundle.js
+

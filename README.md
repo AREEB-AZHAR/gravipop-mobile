@@ -118,7 +118,13 @@ npm run build:all
 ```
 The optimized static bundle is output to `./dist/` and can be deployed anywhere (Vercel, Netlify, Cloudflare Pages, GitHub Pages, or Docker).
 
-### 5. Preview Production Build
+### 5. ☁️ Deploying to Vercel / Cloudflare / Netlify
+GraviPop is fully configured for zero-configuration cloud deployment:
+1. **Pre-Compiled WASM in `public/`**: Cloud platforms (Vercel, Netlify) build using standard Node.js containers without requiring a native Rust/Cargo toolchain. The pre-compiled WebAssembly binary and game assets reside in `public/` and are automatically copied to `dist/` by Vite during the build.
+2. **`vercel.json` Configuration**: Configured with `framework: "vite"`, `outputDirectory: "dist"`, and dedicated `application/wasm` headers.
+3. **Continuous Deployment**: Any push to `master` triggers automatic build and instant global CDN deployment on Vercel.
+
+### 6. Preview Production Build
 ```bash
 npm run preview
 ```

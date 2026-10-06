@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#070814">
+  <meta name="description" content="GraviPop: Stellar Conservatory — High-performance cosmic merge puzzle game in pure Rust & WebAssembly.">
+  <title>GraviPop: Stellar Conservatory</title>
+  <link rel="icon" type="image/jpeg" href="/assets/gravipop_icon.jpg">
+  <link rel="stylesheet" href="/src/web/style.css">
+</head>
+<body>
+  <div id="app-shell">
+    <!-- Top Navigation Bar -->
+    <header id="top-bar">
+      <div class="brand-group">
+        <div class="brand-icon">🌌</div>
+        <div>
+          <span class="brand-title">GRAVIPOP</span>
+        </div>
+        <span class="brand-badge">WASM 1.0</span>
+      </div>
+
+      <div class="top-actions">
+        <div class="stat-pill">
+          <span class="icon">✨</span>
+          <span>Stardust: <strong id="stat-stardust">100</strong></span>
+        </div>
+        <div class="stat-pill">
+          <span class="icon">🏆</span>
+          <span>Best: <strong id="stat-high-score">0</strong></span>
+        </div>
+        <button id="btn-fullscreen" class="btn-icon" title="Toggle Fullscreen (F)" aria-label="Toggle Fullscreen">
+          ⛶
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Area -->
+    <main id="main-stage">
+      <!-- Left Panel: Celestial Codex -->
+      <aside id="left-panel" class="side-panel">
+        <div class="panel-header">
+          <span class="panel-title">⭐ Celestial Codex</span>
+          <span class="brand-badge">10 Tiers</span>
+        </div>
+        <div id="codex-list" class="codex-list">
+          <!-- Populated by main.js -->
+        </div>
+      </aside>
+
+      <!-- Center Game Arena -->
+      <section id="game-arena">
+        <div id="canvas-wrapper">
+          <canvas id="glcanvas" tabindex="1"></canvas>
+          <input id="leaderboard-name" type="text" maxlength="20" aria-label="Public leaderboard name">
+        </div>
+
+        <!-- Floating Mobile Quick Bar -->
+        <nav id="mobile-floating-bar" aria-label="Mobile Navigation">
+          <button id="btn-mobile-codex" class="btn-icon" title="Celestial Codex" aria-label="Celestial Codex">📖</button>
+          <button id="btn-mobile-controls" class="btn-icon" title="Controls" aria-label="Controls">🎮</button>
+        </nav>
+      </section>
+
+      <!-- Right Panel: Mission Control -->
+      <aside id="right-panel" class="side-panel">
+        <div class="panel-header">
+          <span class="panel-title">🎮 Mission Control</span>
+          <span class="brand-badge">Controls</span>
+        </div>
+
+        <div class="control-card">
+          <h4>Game Controls</h4>
+          <div class="control-row">
+            <span>Aim Celestial Body</span>
+            <span class="kbd-badge">← → / A D</span>
+          </div>
+          <div class="control-row">
+            <span>Release & Drop</span>
+            <span class="kbd-badge">Space / ↓</span>
+          </div>
+          <div class="control-row">
+            <span>Gravity Wave (50 ✨)</span>
+            <span class="kbd-badge">1</span>
+          </div>
+          <div class="control-row">
+            <span>Solar Flare (100 ✨)</span>
+            <span class="kbd-badge">2</span>
+          </div>
+          <div class="control-row">
+            <span>Pause / Esc</span>
+            <span class="kbd-badge">P / Esc</span>
+          </div>
+          <div class="control-row">
+            <span>Toggle Fullscreen</span>
+            <span class="kbd-badge">F</span>
+          </div>
+        </div>
+
+        <div class="control-card">
+          <h4>Engine Specifications</h4>
+          <div class="control-row">
+            <span>Runtime</span>
+            <span class="kbd-badge">Rust + WASM</span>
+          </div>
+          <div class="control-row">
+            <span>Renderer</span>
+            <span class="kbd-badge">WebGL2 60 FPS</span>
+          </div>
+          <div class="control-row">
+            <span>Memory</span>
+            <span class="kbd-badge">Zero GC Pauses</span>
+          </div>
+          <div class="control-row">
+            <span>Leaderboard</span>
+            <span class="kbd-badge">Supabase REST</span>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Runtime Scripts -->
+  <script src="/env.js"></script>
+  <script src="/mq_js_bundle.js"></script>
+  <script src="/gravipop_web.js"></script>
+  <script type="module" src="/src/web/main.js"></script>
+  <script>
+    load("/gravipop-mobile.wasm");
+  </script>
+</body>
+</html>

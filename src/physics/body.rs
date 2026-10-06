@@ -1,6 +1,6 @@
-use macroquad::prelude::Vec2;
 use super::celestial_tier::CelestialTier;
 use crate::core::config::*;
+use macroquad::prelude::Vec2;
 
 #[derive(Debug, Clone)]
 pub struct CelestialBody {
@@ -34,7 +34,8 @@ impl CelestialBody {
         }
     }
 
-    /// Advance physics: gravity, integrate, wall & floor collision.
+    /// Advance the body's free motion. Contact resolution is handled centrally
+    /// by `CollisionEngine` so bodies are not clamped twice per frame.
     pub fn update(&mut self, dt: f32) {
         // Downward gravity
         self.vel.y += GRAVITY_ACCEL * dt;
@@ -46,27 +47,6 @@ impl CelestialBody {
         self.age += dt;
         self.pulse_phase += dt * 2.5;
         self.rotation += self.rotation_speed * dt;
-
-        let r = self.radius;
-
-        // Left wall
-        if self.pos.x - r < JAR_LEFT {
-            self.pos.x = JAR_LEFT + r;
-            self.vel.x = self.vel.x.abs() * WALL_RESTITUTION;
-            self.vel.y *= 0.99;
-        }
-        // Right wall
-        if self.pos.x + r > JAR_RIGHT {
-            self.pos.x = JAR_RIGHT - r;
-            self.vel.x = -self.vel.x.abs() * WALL_RESTITUTION;
-            self.vel.y *= 0.99;
-        }
-        // Floor
-        if self.pos.y + r > JAR_BOTTOM {
-            self.pos.y = JAR_BOTTOM - r;
-            self.vel.y = -self.vel.y.abs() * FLOOR_RESTITUTION;
-            self.vel.x *= FLOOR_FRICTION;
-        }
     }
 
     /// True when this body has essentially come to rest.

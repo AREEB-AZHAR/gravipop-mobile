@@ -1,0 +1,382 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+:root {
+  --bg-deep: #05060f;
+  --bg-nebula: radial-gradient(circle at 50% 10%, #151638 0%, #080918 55%, #04040a 100%);
+  --panel-bg: rgba(14, 16, 36, 0.72);
+  --panel-bg-hover: rgba(22, 26, 54, 0.85);
+  --panel-border: rgba(116, 180, 242, 0.18);
+  --panel-border-glow: rgba(94, 234, 212, 0.35);
+  --cyan-glow: #38bdf8;
+  --purple-glow: #c084fc;
+  --amber-glow: #fbbf24;
+  --text-main: #f8fafc;
+  --text-sub: #94a3b8;
+  --text-dim: #64748b;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-deep);
+  background-image: var(--bg-nebula);
+  color: var(--text-main);
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  user-select: none;
+}
+
+/* ── App Grid Container ── */
+#app-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+/* ── Top Navigation Bar ── */
+#top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  background: rgba(8, 10, 26, 0.82);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--panel-border);
+  z-index: 20;
+  height: 56px;
+}
+
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #38bdf8, #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+  font-size: 16px;
+}
+
+.brand-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: linear-gradient(90deg, #ffffff, #7dd3fc, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: rgba(56, 189, 248, 0.14);
+  color: var(--cyan-glow);
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(22, 26, 54, 0.6);
+  border: 1px solid var(--panel-border);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stat-pill .icon {
+  color: var(--amber-glow);
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(22, 26, 54, 0.7);
+  border: 1px solid var(--panel-border);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-icon:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: var(--cyan-glow);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-icon:active {
+  transform: translateY(0);
+}
+
+/* ── Main Workspace ── */
+#main-stage {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 56px);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Side Panels (Desktop Wings) ── */
+.side-panel {
+  width: 320px;
+  height: 100%;
+  background: var(--panel-bg);
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 10;
+  border-color: var(--panel-border);
+  transition: var(--transition);
+}
+
+.side-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.side-panel::-webkit-scrollbar-thumb {
+  background: rgba(116, 180, 242, 0.25);
+  border-radius: 4px;
+}
+
+#left-panel {
+  border-right: 1px solid var(--panel-border);
+}
+
+#right-panel {
+  border-left: 1px solid var(--panel-border);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--cyan-glow);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Codex Tier Cards ── */
+.codex-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.codex-card {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  background: rgba(18, 21, 44, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.codex-card:hover {
+  background: var(--panel-bg-hover);
+  border-color: var(--tier-glow, var(--cyan-glow));
+  box-shadow: 0 0 16px -4px var(--tier-glow, rgba(56, 189, 248, 0.3));
+  transform: translateX(4px);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.tier-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.tier-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  flex: 1;
+  margin-left: 10px;
+}
+
+.tier-pts {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--amber-glow);
+  font-family: 'Space Grotesk', monospace;
+}
+
+.card-desc {
+  font-size: 11px;
+  color: var(--text-sub);
+  line-height: 1.4;
+}
+
+/* ── Center Game Viewport ── */
+#game-arena {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #030308;
+  overflow: hidden;
+}
+
+#canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#glcanvas {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  outline: none;
+  touch-action: none;
+}
+
+#leaderboard-name {
+  display: none;
+  position: absolute;
+  z-index: 25;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #74b4f2;
+  border-radius: 6px;
+  background: #121329;
+  color: white;
+  font: 18px 'Outfit', system-ui, sans-serif;
+  outline: none;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+}
+
+/* ── Controls Wing Cards ── */
+.control-card {
+  padding: 16px;
+  background: rgba(18, 21, 44, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+}
+
+.control-card h4 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-sub);
+  margin-bottom: 12px;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.kbd-badge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #e2e8f0;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 11px;
+}
+
+/* ── Responsive Adaptations ── */
+@media (max-width: 1180px) {
+  .side-panel {
+    display: none;
+  }
+  .mobile-toggle {
+    display: flex !important;
+  }
+}
+
+.mobile-toggle {
+  display: none;
+}
+
+/* ── Floating Mobile Bar ── */
+#mobile-floating-bar {
+  display: none;
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(14, 16, 36, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--panel-border);
+  border-radius: 30px;
+  padding: 6px 16px;
+  gap: 12px;
+  z-index: 30;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 1180px) {
+  #mobile-floating-bar {
+    display: flex;
+  }
+}

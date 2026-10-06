@@ -17,3 +17,15 @@ android/app/*.iml
 local.properties
 android/local.properties
 gravipop_save.json
+node_modules/
+dist/
+web_screenshot*.png
+gameplay_screenshot*.png
+gameplay_dropped*.png
+vite_app_screenshot*.png
+web/gravipop-mobile.wasm
+web/assets/
+web/mq_js_bundle.js
+public/gravipop-mobile.wasm
+public/assets/
+public/mq_js_bundle.js

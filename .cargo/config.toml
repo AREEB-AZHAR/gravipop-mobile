@@ -5,3 +5,6 @@ linker = "C:/Users/areeb/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/
 [target.armv7-linux-androideabi]
 ar = "C:/Users/areeb/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"
 linker = "C:/Users/areeb/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/bin/armv7a-linux-androideabi34-clang.cmd"
+
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=--import-undefined"]

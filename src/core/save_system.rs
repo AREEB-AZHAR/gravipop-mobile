@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs;
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
 
 /// Versioned player save data. Old fields are kept with `#[serde(default)]`
@@ -10,6 +12,9 @@ pub struct SaveData {
     pub high_score: u64,
     pub stardust: u64,
     pub runs_played: u32,
+    /// Public display name chosen at the end of a run.
+    #[serde(default)]
+    pub public_name: String,
 
     // ── Sector progression (one star-count per sector index) ─────────────────
     /// Stars earned per sector (0 = not completed, 1–3 = done).
@@ -34,14 +39,17 @@ pub struct SaveData {
     pub haptics_enabled: bool,
 }
 
-fn default_true() -> bool { true }
+fn default_true() -> bool {
+    true
+}
 
 impl Default for SaveData {
     fn default() -> Self {
         Self {
             high_score: 0,
-            stardust: 100,       // starter gift
+            stardust: 100, // starter gift
             runs_played: 0,
+            public_name: String::new(),
             sector_stars: vec![0u8; 16],
             sectors_unlocked: 0, // first sector always unlocked
             ads_removed: false,
@@ -82,6 +90,7 @@ impl SaveData {
 }
 
 pub struct SaveManager {
+    #[cfg(not(target_arch = "wasm32"))]
     save_path: PathBuf,
 }
 
@@ -93,22 +102,44 @@ impl Default for SaveManager {
 
 impl SaveManager {
     pub fn new() -> Self {
-        Self { save_path: PathBuf::from("gravipop_save.json") }
+        Self {
+            #[cfg(not(target_arch = "wasm32"))]
+            save_path: PathBuf::from("gravipop_save.json"),
+        }
     }
 
     pub fn load(&self) -> SaveData {
-        if let Ok(text) = fs::read_to_string(&self.save_path) {
-            if let Ok(data) = serde_json::from_str::<SaveData>(&text) {
-                return data;
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(text) = crate::core::web_bridge::storage_get("gravipop.save.v1") {
+                if let Ok(data) = serde_json::from_str::<SaveData>(&text) {
+                    return data;
+                }
             }
+            return SaveData::default();
         }
-        SaveData::default()
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Ok(text) = fs::read_to_string(&self.save_path) {
+                if let Ok(data) = serde_json::from_str::<SaveData>(&text) {
+                    return data;
+                }
+            }
+            SaveData::default()
+        }
     }
 
     pub fn save(&self, data: &SaveData) -> Result<(), std::io::Error> {
-        let json = serde_json::to_string_pretty(data)
-            .map_err(std::io::Error::other)?;
-        fs::write(&self.save_path, json)
+        let json = serde_json::to_string_pretty(data).map_err(std::io::Error::other)?;
+        #[cfg(target_arch = "wasm32")]
+        {
+            crate::core::web_bridge::storage_set("gravipop.save.v1", &json);
+            Ok(())
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            fs::write(&self.save_path, json)
+        }
     }
 }
 

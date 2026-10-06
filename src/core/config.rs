@@ -5,27 +5,27 @@ pub const VIRTUAL_HEIGHT: f32 = 1280.0;
 // ── Container ("the jar") ─────────────────────────────────────────────────────
 pub const JAR_LEFT: f32 = 90.0;
 pub const JAR_RIGHT: f32 = 630.0;
-pub const JAR_TOP_LINE: f32 = 360.0;     // danger / overflow threshold y
-pub const JAR_BOTTOM: f32 = 1110.0;      // floor of the jar
-pub const JAR_WIDTH: f32 = JAR_RIGHT - JAR_LEFT;   // 540.0
+pub const JAR_TOP_LINE: f32 = 340.0; // open rim / overflow threshold y
+pub const JAR_BOTTOM: f32 = 1110.0; // floor of the jar
+pub const JAR_WIDTH: f32 = JAR_RIGHT - JAR_LEFT; // 540.0
 pub const JAR_HEIGHT: f32 = JAR_BOTTOM - JAR_TOP_LINE; // 750.0
 
 // ── Drop zone ─────────────────────────────────────────────────────────────────
-pub const DROP_Y: f32 = 300.0;           // y where new bodies appear before dropping
-pub const DROP_COOLDOWN: f32 = 0.45;     // seconds between drops
+pub const DROP_Y: f32 = 245.0; // y where new bodies appear before dropping
+pub const DROP_COOLDOWN: f32 = 0.38; // seconds between drops
 
 // ── Physics ───────────────────────────────────────────────────────────────────
-pub const GRAVITY_ACCEL: f32 = 1450.0;
-pub const WALL_RESTITUTION: f32 = 0.30;
-pub const FLOOR_RESTITUTION: f32 = 0.20;
-pub const FLOOR_FRICTION: f32 = 0.82;
-pub const BODY_RESTITUTION: f32 = 0.28;
+pub const GRAVITY_ACCEL: f32 = 980.0;
+pub const WALL_RESTITUTION: f32 = 0.24;
+pub const FLOOR_RESTITUTION: f32 = 0.26;
+pub const FLOOR_FRICTION: f32 = 0.86;
+pub const BODY_RESTITUTION: f32 = 0.20;
 pub const MERGE_COOLDOWN: f32 = 0.25;
 pub const COLLISION_PASSES: usize = 6;
 
 // ── Danger / game-over ────────────────────────────────────────────────────────
 pub const DANGER_TIME: f32 = 2.5;
-pub const CRITICAL_TIME_LIMIT: f32 = DANGER_TIME;   // alias used in hud
+pub const CRITICAL_TIME_LIMIT: f32 = DANGER_TIME; // alias used in hud
 
 // ── Abilities (earn 1 charge per milestone merge, max 3 active) ───────────────
 pub const MAX_ABILITY_CHARGES: u32 = 3;

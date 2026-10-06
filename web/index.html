@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#080817">
+  <title>GraviPop: Stellar Conservatory</title>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #080817; }
+    canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+    #leaderboard-name { display: none; position: absolute; z-index: 2; box-sizing: border-box; padding: 0 12px;
+      border: 1px solid #74b4f2; border-radius: 5px; background: #121329; color: white;
+      font: 18px system-ui, sans-serif; outline: none; }
+  </style>
+</head>
+<body>
+  <canvas id="glcanvas" tabindex="1"></canvas>
+  <input id="leaderboard-name" type="text" maxlength="20" autocomplete="nickname" aria-label="Public leaderboard name">
+  <script src="env.js"></script>
+  <script src="mq_js_bundle.js"></script>
+  <script src="gravipop_web.js"></script>
+  <script>load("gravipop-mobile.wasm");</script>
+</body>
+</html>

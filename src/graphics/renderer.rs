@@ -67,8 +67,8 @@ impl BodyRenderer {
         // ── 1. Atmospheric Glow / Halo ───────────────────────────────────────
         let glow_scale_outer = if is_preview { 1.14 } else { 1.35 * pulse };
         let glow_scale_inner = if is_preview { 1.06 } else { 1.16 * pulse };
-        let glow_alpha_outer = if is_preview { 0.18 } else { 0.28 };
-        let glow_alpha_inner = if is_preview { 0.35 } else { 0.55 };
+        let glow_alpha_outer = if is_preview { 0.20 } else { 0.34 };
+        let glow_alpha_inner = if is_preview { 0.38 } else { 0.58 };
 
         draw_circle(pos.x, pos.y, r * glow_scale_outer, Color::new(glow.r, glow.g, glow.b, glow.a * glow_alpha_outer));
         draw_circle(pos.x, pos.y, r * glow_scale_inner, Color::new(glow.r, glow.g, glow.b, glow.a * glow_alpha_inner));
@@ -76,10 +76,10 @@ impl BodyRenderer {
         // ── 2. Base Sphere & 3D Shading ──────────────────────────────────────
         draw_circle(pos.x, pos.y, r, primary);
 
-        // 3D Spherical Ambient Shadow (bottom-right crescent)
-        draw_circle(pos.x + r * 0.22, pos.y + r * 0.22, r * 0.82, Color::new(0.0, 0.0, 0.04, 0.32));
+        // Lighter, colour-preserving shade keeps the little worlds buoyant rather than muddy.
+        draw_circle(pos.x + r * 0.22, pos.y + r * 0.22, r * 0.82, Color::new(0.02, 0.03, 0.10, 0.22));
         // 3D Spherical Specular Highlight (top-left dome)
-        draw_circle(pos.x - r * 0.26, pos.y - r * 0.26, r * 0.48, Color::new(1.0, 1.0, 1.0, 0.22));
+        draw_circle(pos.x - r * 0.26, pos.y - r * 0.26, r * 0.48, Color::new(1.0, 1.0, 1.0, 0.28));
         // Specular glint
         draw_circle(pos.x - r * 0.34, pos.y - r * 0.34, r * 0.14, Color::new(1.0, 1.0, 1.0, 0.42));
 
@@ -345,8 +345,9 @@ impl BodyRenderer {
         }
 
         // ── 4. Crisp Celestial Rim Outline ───────────────────────────────────
-        let rim_alpha = if is_preview { 0.50 } else { 0.40 };
-        draw_circle_lines(pos.x, pos.y, r, 1.6, Color::new(1.0, 1.0, 1.0, rim_alpha));
+        let rim_alpha = if is_preview { 0.58 } else { 0.48 };
+        draw_circle_lines(pos.x, pos.y, r * 0.985, 1.6, Color::new(1.0, 1.0, 1.0, rim_alpha));
+        draw_circle_lines(pos.x, pos.y, r * 1.025, 0.8, Color::new(glow.r, glow.g, glow.b, rim_alpha * 0.42));
     }
 
     /// Renders the slingshot aiming line and trajectory dots

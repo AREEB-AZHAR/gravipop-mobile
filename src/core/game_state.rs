@@ -2,11 +2,12 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameState {
     MainMenu,
-    GalaxyMap,          // browse / select sectors
-    Playing,            // the actual drop game
-    SectorComplete,     // objective met — celebrate + advance
+    GalaxyMap,      // browse / select sectors
+    Playing,        // the actual drop game
+    SectorComplete, // objective met — celebrate + advance
     Paused,
     GameOver,
+    Leaderboard,
     Shop,
     WatchingAd,
 }

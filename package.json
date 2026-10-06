@@ -1,0 +1,21 @@
+{
+  "name": "gravipop-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "GraviPop: Stellar Conservatory — Modern Vite Web Edition",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "build:all": "npm run build:wasm && npm run build",
+    "start": "node server.mjs"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0"
+  }
+}

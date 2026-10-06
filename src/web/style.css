@@ -267,6 +267,13 @@ html, body {
   gap: 8px;
 }
 
+.codex-drop-note {
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+
 .codex-card {
   display: flex;
   flex-direction: column;
@@ -419,6 +426,44 @@ html, body {
 }
 
 /* ── Mobile Floating Quick Actions ── */
+.ad-rail {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 22;
+  pointer-events: auto;
+}
+
+.ad-rail[hidden] { display: none; }
+.ad-rail-left { left: 16px; }
+.ad-rail-right { right: 16px; }
+
+.ad-label {
+  color: var(--text-sub);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.google-ad-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.ads-status {
+  margin-top: auto;
+  padding-top: 12px;
+  color: var(--text-dim);
+  font-size: 11px;
+  text-align: center;
+}
+
 #mobile-floating-bar {
   display: none;
   position: absolute;
@@ -447,6 +492,7 @@ html, body {
 
 /* ── Responsive Adaptations for Mobile & Tablets ── */
 @media (max-width: 1080px) {
+  .ad-rail { display: none; }
   /* On mobile and tablets, side panels become overlay slide-in drawers */
   .side-panel {
     position: fixed;

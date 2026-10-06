@@ -94,6 +94,39 @@ pub struct SaveManager {
     save_path: PathBuf,
 }
 
+#[cfg(target_os = "android")]
+fn android_save_path() -> PathBuf {
+    use macroquad::miniquad::native::android::{self, ndk_sys::*};
+    // The Java Activity supplies its app-private directory; Android does not
+    // permit writing a relative save file into the process working directory.
+    unsafe {
+        let activity = android::ACTIVITY;
+        if activity.is_null() { return PathBuf::from("gravipop_save.json"); }
+        let env = android::attach_jni_env();
+        let class = (**env).GetObjectClass.unwrap()(env, activity);
+        let method = (**env).GetMethodID.unwrap()(env, class,
+            b"getSaveDirectoryFromNative\0".as_ptr().cast(),
+            b"()Ljava/lang/String;\0".as_ptr().cast());
+        if method.is_null() {
+            (**env).ExceptionClear.unwrap()(env);
+            (**env).DeleteLocalRef.unwrap()(env, class);
+            return PathBuf::from("gravipop_save.json");
+        }
+        let value = (**env).CallObjectMethodA.unwrap()(env, activity, method, std::ptr::null()) as jstring;
+        (**env).DeleteLocalRef.unwrap()(env, class);
+        if value.is_null() {
+            (**env).ExceptionClear.unwrap()(env);
+            return PathBuf::from("gravipop_save.json");
+        }
+        let chars = (**env).GetStringUTFChars.unwrap()(env, value, std::ptr::null_mut());
+        let directory = if chars.is_null() { String::new() }
+            else { std::ffi::CStr::from_ptr(chars).to_string_lossy().into_owned() };
+        if !chars.is_null() { (**env).ReleaseStringUTFChars.unwrap()(env, value, chars); }
+        (**env).DeleteLocalRef.unwrap()(env, value);
+        PathBuf::from(directory).join("gravipop_save.json")
+    }
+}
+
 impl Default for SaveManager {
     fn default() -> Self {
         Self::new()
@@ -103,8 +136,10 @@ impl Default for SaveManager {
 impl SaveManager {
     pub fn new() -> Self {
         Self {
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
             save_path: PathBuf::from("gravipop_save.json"),
+            #[cfg(target_os = "android")]
+            save_path: android_save_path(),
         }
     }
 

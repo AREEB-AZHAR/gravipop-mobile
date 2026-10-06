@@ -1,5 +1,4 @@
 use macroquad::color::Color;
-use quad_rand::gen_range;
 
 /// Cosmic tiers sized to fit in the 520 px jar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -138,31 +137,6 @@ impl CelestialTier {
         }
     }
 
-    /// Bigger drops unlock by run score. Each starts at a tiny weight and
-    /// ramps over the next three unlock thresholds, keeping small drops common.
-    fn spawn_weights(score: u64) -> [f32; 13] {
-        let mut weights = [0.0; 13];
-        weights[..3].copy_from_slice(&[60.0, 30.0, 10.0]);
-        let thresholds = [250, 750, 1_500, 3_000, 6_000, 12_000, 24_000, 48_000, 96_000, 192_000];
-        for (offset, threshold) in thresholds.iter().enumerate() {
-            if score >= *threshold {
-                let progress = ((score - threshold) as f32 / (*threshold as f32 * 3.0)).min(1.0);
-                let max_weight = 8.0 / (1.0 + offset as f32 * 0.5);
-                weights[offset + 3] = 0.2 + progress * (max_weight - 0.2);
-            }
-        }
-        weights
-    }
-
-    pub fn random_spawn_tier(score: u64) -> Self {
-        let weights = Self::spawn_weights(score);
-        let mut roll = gen_range(0.0, weights.iter().sum::<f32>());
-        for (tier, weight) in Self::ALL.iter().zip(weights) {
-            if roll < weight { return *tier; }
-            roll -= weight;
-        }
-        Self::Asteroid
-    }
 }
 
 #[cfg(test)]
@@ -203,19 +177,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn larger_drops_unlock_and_ramp_gradually() {
-        assert_eq!(CelestialTier::spawn_weights(0)[..3], [60.0, 30.0, 10.0]);
-        for (index, threshold) in [250, 750, 1_500, 3_000, 6_000, 12_000, 24_000, 48_000, 96_000, 192_000].iter().enumerate() {
-            let tier = index + 3;
-            assert_eq!(CelestialTier::spawn_weights(threshold - 1)[tier], 0.0);
-            let initial = CelestialTier::spawn_weights(*threshold)[tier];
-            let middle = CelestialTier::spawn_weights(threshold * 2)[tier];
-            let mature = CelestialTier::spawn_weights(threshold * 4)[tier];
-            assert!(initial > 0.0 && initial < middle && middle < mature);
-            assert_eq!(mature, CelestialTier::spawn_weights(u64::MAX)[tier]);
-        }
-        let weights = CelestialTier::spawn_weights(u64::MAX);
-        assert!(weights[3..].iter().sum::<f32>() / weights.iter().sum::<f32>() < 0.3);
-    }
 }

@@ -47,6 +47,7 @@
           <span class="panel-title">⭐ Celestial Codex</span>
           <button id="btn-close-left" class="close-panel-btn" title="Close Codex">✕</button>
         </div>
+        <p class="codex-drop-note">Drops start with Asteroid, Moon and Earth. Merge two Saturns to unlock rare Jupiter drops; each new highest merge unlocks the next drop tier. Points come from merges.</p>
         <div id="codex-list" class="codex-list">
           <!-- Populated by main.js -->
         </div>
@@ -54,6 +55,14 @@
 
       <!-- Center Game Arena -->
       <section id="game-arena">
+        <aside id="ad-rail-left" class="ad-rail ad-rail-left" aria-label="Left sidebar advertisement" hidden>
+          <span class="ad-label">Advertisement</span>
+          <div id="google-ad-left" class="google-ad-slot"></div>
+        </aside>
+        <aside id="ad-rail-right" class="ad-rail ad-rail-right" aria-label="Right sidebar advertisement" hidden>
+          <span class="ad-label">Advertisement</span>
+          <div id="google-ad-right" class="google-ad-slot"></div>
+        </aside>
         <div id="canvas-wrapper">
           <canvas id="glcanvas" tabindex="1"></canvas>
           <div id="name-input-container">
@@ -124,9 +133,10 @@
           </div>
           <div class="control-row">
             <span>Leaderboard</span>
-            <span class="kbd-badge">Supabase REST</span>
+            <span class="kbd-badge">Shared HTTPS API</span>
           </div>
         </div>
+        <p id="ads-status" class="ads-status" aria-live="polite"></p>
       </aside>
     </main>
 
@@ -136,6 +146,7 @@
 
   <!-- Runtime Scripts -->
   <script src="/env.js"></script>
+  <script src="/gravipop_ads.js"></script>
   <script src="/mq_js_bundle.js"></script>
   <script src="/gravipop_web.js"></script>
   <script type="module" src="/src/web/main.js"></script>

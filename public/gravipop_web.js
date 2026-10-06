@@ -1,5 +1,5 @@
 // GraviPop Miniquad Web Plugin
-// Handles localStorage persistence, DOM name input alignment, and Supabase Leaderboard REST calls.
+// Handles localStorage persistence, DOM name input alignment, and the shared leaderboard API.
 "use strict";
 
 (function () {
@@ -17,64 +17,23 @@
         return writeBytesToWasm(bytes, outPtr, maxLen);
     }
 
-    // Leaderboard state
-    const SUPABASE_URL = (window.GRAVIPOP_SUPABASE_URL || "").replace(/\/+$/, "");
-    const SUPABASE_KEY = window.GRAVIPOP_SUPABASE_ANON_KEY || "";
+    // Every build uses the same HTTPS API; no browser-only database branch.
     let leaderboardStatus = "";
     let leaderboardDataJson = "[]";
     let isFetching = false;
-
-    function isConfigured() {
-        return Boolean(SUPABASE_URL && SUPABASE_KEY);
-    }
-
-    async function ensureSession() {
-        let session = null;
+    let isSubmitting = false;
+    let leaderboardVersion = 0;
+    function isConfigured() { return true; }
+    function leaderboardUrl() { return window.GRAVIPOP_LEADERBOARD_URL || "/api/leaderboard"; }
+    async function leaderboardRequest(options) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
         try {
-            const stored = localStorage.getItem("gravipop.auth.session");
-            if (stored) session = JSON.parse(stored);
-        } catch (_) {}
-
-        const now = Date.now();
-        if (session && session.expires_at_ms && session.expires_at_ms > now + 30000) {
-            return session;
+            const response = await fetch(leaderboardUrl(), { ...options, signal: controller.signal });
+            if (!response.ok) throw new Error("Leaderboard unavailable");
+            return await response.json();
         }
-
-        if (session && session.refresh_token) {
-            try {
-                const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-                    method: "POST",
-                    headers: {
-                        "apikey": SUPABASE_KEY,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ refresh_token: session.refresh_token })
-                });
-                if (res.ok) {
-                    const refreshed = await res.json();
-                    refreshed.expires_at_ms = Date.now() + (refreshed.expires_in || 3600) * 1000;
-                    localStorage.setItem("gravipop.auth.session", JSON.stringify(refreshed));
-                    return refreshed;
-                }
-            } catch (_) {}
-        }
-
-        const signupRes = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-            method: "POST",
-            headers: {
-                "apikey": SUPABASE_KEY,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ data: {} })
-        });
-        if (!signupRes.ok) {
-            const text = await signupRes.text();
-            throw new Error(`Auth failed (${signupRes.status}): ${text}`);
-        }
-        const newSession = await signupRes.json();
-        newSession.expires_at_ms = Date.now() + (newSession.expires_in || 3600) * 1000;
-        localStorage.setItem("gravipop.auth.session", JSON.stringify(newSession));
-        return newSession;
+        finally { clearTimeout(timeout); }
     }
 
     function getLocalLeaderboard() {
@@ -82,11 +41,7 @@
             const raw = localStorage.getItem("gravipop.local_leaderboard");
             if (raw) return JSON.parse(raw);
         } catch (_) {}
-        return [
-            { display_name: "Nova-Explorer", high_score: 1250 },
-            { display_name: "AstroPioneer", high_score: 840 },
-            { display_name: "StellarWanderer", high_score: 420 },
-        ];
+        return [];
     }
 
     function saveToLocalLeaderboard(name, score) {
@@ -106,54 +61,21 @@
     }
 
     async function doLeaderboardRefresh() {
-        if (isFetching) return;
+        if (isFetching || isSubmitting) return;
         isFetching = true;
-        leaderboardStatus = "Refreshing leaderboard...";
+        const version = ++leaderboardVersion;
+        leaderboardStatus = "Refreshing global leaderboard...";
         try {
-            if (isConfigured()) {
-                const session = await ensureSession();
-                const token = session?.access_token || SUPABASE_KEY;
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_gravipop_leaderboard`, {
-                    method: "POST",
-                    headers: {
-                        "apikey": SUPABASE_KEY,
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                        "Accept": "application/json"
-                    },
-                    body: JSON.stringify({ p_limit: 20 })
-                });
-                if (!res.ok) {
-                    const err = await res.text();
-                    leaderboardStatus = `Error ${res.status}: ${err}`;
-                    return;
-                }
-                const data = await res.json();
-                leaderboardDataJson = JSON.stringify(data);
-                leaderboardStatus = "Global Leaderboard Synchronized";
-            } else {
-                // Shared global cloud leaderboard endpoint
-                const res = await fetch("/api/leaderboard", {
-                    method: "GET",
-                    headers: { "Accept": "application/json" }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data) && data.length > 0) {
-                        leaderboardDataJson = JSON.stringify(data);
-                        leaderboardStatus = "Global Leaderboard Synchronized";
-                        return;
-                    }
-                }
-                leaderboardDataJson = JSON.stringify(getLocalLeaderboard());
-                leaderboardStatus = "Commander Records Active";
-            }
-        } catch (err) {
+            const data = await leaderboardRequest({ headers: { "Accept": "application/json" } });
+            if (!Array.isArray(data)) throw new Error("Invalid leaderboard response");
+            if (version !== leaderboardVersion) return;
+            leaderboardDataJson = JSON.stringify(data);
+            leaderboardStatus = "Global Leaderboard Synchronized";
+        } catch (_) {
+            if (version !== leaderboardVersion) return;
             leaderboardDataJson = JSON.stringify(getLocalLeaderboard());
-            leaderboardStatus = "Records Loaded (Offline)";
-        } finally {
-            isFetching = false;
-        }
+            leaderboardStatus = "Offline: showing scores saved on this device";
+        } finally { isFetching = false; }
     }
 
     async function doLeaderboardSubmit(displayName, score) {
@@ -162,43 +84,21 @@
             leaderboardStatus = "Enter at least 3 characters.";
             return;
         }
+        if (isSubmitting) return;
+        isSubmitting = true;
+        ++leaderboardVersion; // A stale refresh cannot overwrite this submission.
         saveToLocalLeaderboard(displayName, score);
         leaderboardStatus = "Submitting score to global leaderboard...";
         try {
-            if (isConfigured()) {
-                const session = await ensureSession();
-                const token = session?.access_token || SUPABASE_KEY;
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_gravipop_score`, {
-                    method: "POST",
-                    headers: {
-                        "apikey": SUPABASE_KEY,
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ p_display_name: displayName, p_score: score })
-                });
-                if (!res.ok) {
-                    const err = await res.text();
-                    leaderboardStatus = `Saved locally! (Cloud error ${res.status})`;
-                    return;
-                }
-            } else {
-                // Post to global shared leaderboard API
-                const res = await fetch("/api/leaderboard", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ display_name: displayName, high_score: score })
-                });
-                if (!res.ok) {
-                    leaderboardStatus = `Saved locally! (HTTP ${res.status})`;
-                    return;
-                }
-            }
-            leaderboardStatus = `✓ Score ${score} submitted globally!`;
-            await doLeaderboardRefresh();
-        } catch (err) {
-            leaderboardStatus = "Saved locally! (Cloud sync: offline)";
-        }
+            const data = await leaderboardRequest({
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ display_name: displayName, high_score: score })
+            });
+            if (data.success !== true || !Array.isArray(data.scores)) throw new Error("Invalid submission response");
+            leaderboardDataJson = JSON.stringify(data.scores);
+            leaderboardStatus = "Score submitted globally!";
+        } catch (_) { leaderboardStatus = "Score saved on this device. Cloud sync failed; check your connection."; }
+        finally { isSubmitting = false; }
     }
 
     let submitRequested = false;
@@ -208,6 +108,16 @@
         version: 1,
         register_plugin: function (importObject) {
             importObject.env = importObject.env || {};
+
+            // Real SDK callbacks are polled by Rust; DOM controls cannot grant rewards.
+            importObject.env.gravipop_ads_ready = (rewarded) =>
+                window.GravipopAds?.isReady(Boolean(rewarded)) ? 1 : 0;
+            importObject.env.gravipop_ads_show = (requestId, rewarded) =>
+                window.GravipopAds?.show(requestId >>> 0, Boolean(rewarded)) ? 1 : 0;
+            importObject.env.gravipop_ads_poll = (requestId) =>
+                window.GravipopAds?.poll(requestId >>> 0) || 0;
+            importObject.env.gravipop_ads_set_removed = (removed) =>
+                window.GravipopAds?.setRemoved(Boolean(removed));
 
             // ── Storage FFI ──
             importObject.env.gravipop_storage_len = function (keyPtr, keyLen) {

@@ -4,24 +4,18 @@
 const DREAMLO_PUBLIC = "6ac4ec7f8f40bb15a8cf34f8";
 const DREAMLO_PRIVATE = "BKaONkQHlU2ti8qBqP3VjAQ2-zOQJxNUq6sc1A7bwpcQ";
 
-const DEFAULT_LEADERBOARD = [
-  { display_name: "Nova-Explorer", high_score: 1250 },
-  { display_name: "AstroPioneer", high_score: 840 },
-  { display_name: "StellarWanderer", high_score: 420 },
-];
-
 export async function fetchGlobalLeaderboard() {
   try {
     const res = await fetch(`http://dreamlo.com/lb/${DREAMLO_PUBLIC}/json`, {
-      headers: { "Accept": "application/json" }
+      headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(5000)
     });
     if (!res.ok) {
-      return DEFAULT_LEADERBOARD;
+      throw new Error(`Leaderboard provider unavailable (HTTP ${res.status})`);
     }
     const data = await res.json();
     const rawEntries = data?.dreamlo?.leaderboard?.entry;
     if (!rawEntries) {
-      return DEFAULT_LEADERBOARD;
+      return [];
     }
     const list = Array.isArray(rawEntries) ? rawEntries : [rawEntries];
     const normalized = list
@@ -33,10 +27,10 @@ export async function fetchGlobalLeaderboard() {
       .sort((a, b) => b.high_score - a.high_score)
       .slice(0, 20);
 
-    return normalized.length > 0 ? normalized : DEFAULT_LEADERBOARD;
+    return normalized;
   } catch (err) {
     console.error("Leaderboard fetch error:", err);
-    return DEFAULT_LEADERBOARD;
+    throw new Error("Leaderboard provider unavailable");
   }
 }
 
@@ -50,7 +44,7 @@ export async function submitGlobalScore(name, score) {
 
   // Dreamlo spaces encoded as + or URL-safe
   const encodedName = encodeURIComponent(cleanName);
-  const res = await fetch(`http://dreamlo.com/lb/${DREAMLO_PRIVATE}/add/${encodedName}/${cleanScore}`);
+  const res = await fetch(`http://dreamlo.com/lb/${DREAMLO_PRIVATE}/add/${encodedName}/${cleanScore}`, { signal: AbortSignal.timeout(5000) });
   if (!res.ok) {
     throw new Error(`Failed to record score (HTTP ${res.status})`);
   }
@@ -70,7 +64,15 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "GET") {
-    const scores = await fetchGlobalLeaderboard();
+    let scores;
+    try { scores = await fetchGlobalLeaderboard(); }
+    catch (_) {
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Cache-Control", "no-store");
+      res.statusCode = 503;
+      res.end(JSON.stringify({ error: "Leaderboard unavailable. Try again later." }));
+      return;
+    }
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", "public, s-maxage=3, stale-while-revalidate=10");
     res.statusCode = 200;

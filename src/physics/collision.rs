@@ -228,6 +228,7 @@ impl PhysicsWorld {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::config::DROP_Y;
     use crate::physics::CelestialTier;
 
     fn body(id: u64, tier: CelestialTier, x: f32, y: f32, age: f32) -> CelestialBody {
@@ -252,6 +253,21 @@ mod tests {
         assert_eq!(events.len(), 1);
         assert_eq!(bodies.len(), 1);
         assert_eq!(bodies[0].tier, CelestialTier::Moon);
+        assert_eq!(events[0].score_awarded, CelestialTier::Moon.score_value());
+    }
+
+    #[test]
+    fn dropping_or_landing_a_planet_never_awards_points_without_a_merge() {
+        for tier in CelestialTier::ALL {
+            let mut world = PhysicsWorld::default();
+            let mut bodies = vec![CelestialBody::new(1, tier, Vec2::new(360.0, DROP_Y), Vec2::new(0.0, 140.0))];
+            for _ in 0..300 {
+                let events = world.step(&mut bodies, 1.0 / 60.0);
+                assert!(events.is_empty(), "{:?} generated points without a pair to merge", tier);
+            }
+            assert_eq!(bodies.len(), 1);
+            assert_eq!(bodies[0].tier, tier);
+        }
     }
 
     #[test]
@@ -334,4 +350,3 @@ mod tests {
         );
     }
 }
-

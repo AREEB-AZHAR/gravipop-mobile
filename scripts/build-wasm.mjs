@@ -84,6 +84,9 @@ for (const dir of [publicRoot, webRoot]) {
   if (existsSync(join(webRoot, "gravipop_web.js")) && dir !== webRoot) {
     cpSync(join(webRoot, "gravipop_web.js"), join(dir, "gravipop_web.js"));
   }
+  if (dir !== webRoot) {
+    cpSync(join(webRoot, "gravipop_ads.js"), join(dir, "gravipop_ads.js"));
+  }
   if (existsSync(join(webRoot, "env.js")) && dir !== webRoot) {
     cpSync(join(webRoot, "env.js"), join(dir, "env.js"));
   }

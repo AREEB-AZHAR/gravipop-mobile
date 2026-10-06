@@ -12,6 +12,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "build:wasm": "node scripts/build-wasm.mjs",
+    "build:android": "node scripts/build-android.mjs",
+    "test:web": "node scripts/test-submit.mjs && node scripts/test-ads.mjs && node scripts/test-leaderboard.mjs",
     "build:all": "npm run build:wasm && npm run build",
     "start": "node server.mjs"
   },

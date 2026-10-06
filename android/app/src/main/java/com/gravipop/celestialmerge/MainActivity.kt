@@ -1,60 +1,40 @@
 package com.gravipop.celestialmerge
 
-import android.app.NativeActivity
 import android.os.Bundle
-import android.util.Log
-import com.google.android.gms.ads.MobileAds
+import com.gravipop.runtime.QuadActivity
 
-class MainActivity : NativeActivity() {
-    private val TAG = "GraviPop_MainActivity"
-    lateinit var adMobHelper: AdMobHelper
-    lateinit var billingHelper: BillingHelper
-
-    companion object {
-        init {
-            // Load the native shared library compiled from Rust
-            try {
-                System.loadLibrary("gravipop_mobile")
-            } catch (e: UnsatisfiedLinkError) {
-                Log.e("GraviPop", "Native library gravipop_mobile not found: ${e.message}")
-            }
-        }
-    }
+/** The Miniquad SurfaceView host runs Rust, and AdMob overlays that same host.
+ * A NativeActivity cannot host Miniquad's Java/JNI runtime correctly.
+ */
+class MainActivity : QuadActivity() {
+    private lateinit var ads: AdMobHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Initialize Google Mobile Ads SDK
-        MobileAds.initialize(this) { initializationStatus ->
-            Log.d(TAG, "AdMob Initialized: $initializationStatus")
-        }
-
-        adMobHelper = AdMobHelper(this)
-        adMobHelper.loadRewardedAd()
-        adMobHelper.loadInterstitialAd()
-
-        billingHelper = BillingHelper(this)
-        billingHelper.startConnection {
-            Log.d(TAG, "Billing ready")
-        }
+        ads = AdMobHelper(this, ::onNativeAdAvailability, ::onNativeAdFinished)
+        ads.start()
     }
 
-    // JNI Native Entry Points called from Rust
-    fun showRewardedAdFromNative(rewardId: Int) {
-        adMobHelper.showRewardedAd { rewardType ->
-            onNativeAdRewardEarned(rewardType)
-        }
+    fun getSaveDirectoryFromNative(): String = filesDir.absolutePath
+
+    // Called by the Rust render thread; SDK interactions belong to the UI thread.
+    fun requestAdFromNative(requestId: Int, rewarded: Boolean): Boolean {
+        if (!::ads.isInitialized || isFinishing || isDestroyed) return false
+        runOnUiThread { ads.show(requestId, rewarded) }
+        return true
     }
 
-    fun showInterstitialAdFromNative() {
-        adMobHelper.showInterstitialAd()
+    fun showAdPrivacyOptionsFromNative(): Boolean {
+        if (!::ads.isInitialized || isFinishing || isDestroyed) return false
+        runOnUiThread { ads.showPrivacyOptions() }
+        return true
     }
 
-    fun launchPurchaseFromNative(productId: String) {
-        billingHelper.purchaseProduct(productId)
+    override fun onDestroy() {
+        if (::ads.isInitialized) ads.destroy()
+        super.onDestroy()
     }
 
-    // Callbacks to Rust native code
-    private external fun onNativeAdRewardEarned(rewardType: Int)
-    private external fun onNativePurchaseCompleted(productId: String, token: String)
+    private external fun onNativeAdAvailability(flags: Int)
+    private external fun onNativeAdFinished(requestId: Int, result: Int)
 }

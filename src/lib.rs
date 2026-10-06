@@ -12,7 +12,8 @@ use crate::core::leaderboard::LeaderboardClient;
 use crate::core::save_system::{SaveData, SaveManager};
 use crate::core::sector::{all_sectors, ObjectiveTracker};
 use crate::graphics::*;
-use crate::monetization::ads::{AdService, MockAdService, RewardType};
+use crate::monetization::ads::{AdOutcome, PlatformAdService, RewardType};
+use crate::monetization::ad_bridge;
 use crate::monetization::billing::{BillingService, MockBillingService};
 use crate::monetization::economy::EconomyCatalog;
 use crate::physics::*;
@@ -236,7 +237,8 @@ pub async fn game_main() {
     let audio = AudioEngine::new().await;
     let mut starfield = Starfield::new();
     let mut particles = ParticleEngine::new();
-    let mut ads = MockAdService::new();
+    let mut ads = PlatformAdService::new();
+    let mut ad_status = String::new();
     let mut billing =
         MockBillingService::new(save_data.ads_removed, save_data.celestial_pass_unlocked);
     let catalog = EconomyCatalog::new();
@@ -275,7 +277,8 @@ pub async fn game_main() {
     let mut danger_timer = 0.0f32;
 
     // One random planet at a time — no preview choice or reserve system.
-    let mut next_tier = CelestialTier::random_spawn_tier(current_score);
+    let mut drop_pool = DropPool::default();
+    let mut next_tier = drop_pool.random_tier();
     let mut drop_x = VIRTUAL_WIDTH * 0.5;
     let mut is_aiming = false;
     let mut drop_cooldown = 0.0f32;
@@ -343,25 +346,48 @@ pub async fn game_main() {
         if ability_flash > 0.0 {
             ability_flash -= dt;
         }
-        if let Some(reward) = ads.update(dt) {
-            handle_reward(
-                reward,
-                &mut current_score,
-                &mut run_stardust,
-                &mut revives_used,
-                &mut stardust_doubled,
-                &mut bodies,
-                &mut danger_timer,
-                &mut save_data,
-                &save_mgr,
-                &mut game_state,
-            );
+        ad_bridge::set_removed(billing.is_ad_removed());
+        if let Some(outcome) = ads.update() {
+            match outcome {
+                AdOutcome::RewardEarned(reward) => {
+                    ad_status.clear();
+                    handle_reward(
+                        reward,
+                        &mut current_score,
+                        &mut run_stardust,
+                        &mut revives_used,
+                        &mut stardust_doubled,
+                        &mut bodies,
+                        &mut danger_timer,
+                        &mut save_data,
+                        &save_mgr,
+                        &mut game_state,
+                    );
+                }
+                AdOutcome::Closed => {
+                    ad_status.clear();
+                    game_state = GameState::GameOver;
+                }
+                AdOutcome::RewardSkipped => {
+                    ad_status = "Ad closed early. No reward earned.".to_string();
+                    game_state = GameState::GameOver;
+                }
+                AdOutcome::Unavailable => {
+                    ad_status = "Ad unavailable. Please try again later.".to_string();
+                    game_state = GameState::GameOver;
+                }
+            }
         }
 
         // ── LOGIC ────────────────────────────────────────────────────────────
         match game_state {
             // ── Main Menu ────────────────────────────────────────────────────
             GameState::MainMenu => {
+                if ad_bridge::privacy_options_required()
+                    && tap && hit(ptr, VIRTUAL_WIDTH - 210.0, 20.0, 190.0, 44.0)
+                {
+                    ad_bridge::show_privacy_options();
+                }
                 let cx = VIRTUAL_WIDTH * 0.5;
                 let bw = 340.0;
                 let bx = cx - bw * 0.5;
@@ -372,6 +398,7 @@ pub async fn game_main() {
                     || is_key_pressed(KeyCode::Space)
                     || is_key_pressed(KeyCode::Enter)
                 {
+                    ad_status.clear();
                     bodies.clear();
                     next_body_id = 1;
                     current_score = 0;
@@ -381,7 +408,8 @@ pub async fn game_main() {
                     danger_timer = 0.0;
                     ability_charges = 0;
                     drop_cooldown = 0.0;
-                    next_tier = CelestialTier::random_spawn_tier(current_score);
+                    drop_pool = DropPool::default();
+                    next_tier = drop_pool.random_tier();
                     is_aiming = false;
                     game_state = GameState::Playing;
                 }
@@ -399,6 +427,8 @@ pub async fn game_main() {
                 // Name field is deliberately available after every run.
                 if tap && hit(ptr, 50.0, 531.0, 620.0, 48.0) {
                     name_focused = true;
+                    #[cfg(target_os = "android")]
+                    macroquad::miniquad::window::show_keyboard(true);
                 }
                 if name_focused {
                     if is_key_pressed(KeyCode::Backspace) {
@@ -484,7 +514,8 @@ pub async fn game_main() {
                         danger_timer = 0.0;
                         ability_charges = 0;
                         drop_cooldown = 0.0;
-                        next_tier = CelestialTier::random_spawn_tier(current_score);
+                        drop_pool = DropPool::default();
+                        next_tier = drop_pool.random_tier();
                         is_aiming = false;
                         game_state = GameState::Playing;
                         break;
@@ -587,7 +618,7 @@ pub async fn game_main() {
                     particles.spawn_trail(Vec2::new(drop_x, DROP_Y), tier.primary_color());
 
                     // Roll exactly one new random planet after each drop.
-                    next_tier = CelestialTier::random_spawn_tier(current_score);
+                    next_tier = drop_pool.random_tier();
                     drop_cooldown = DROP_COOLDOWN;
                     is_aiming = false;
                 }
@@ -595,6 +626,7 @@ pub async fn game_main() {
                 // Physics Simulation Step
                 let fusions = physics_world.step(&mut bodies, dt);
                 for fus in fusions {
+                    drop_pool.record_merge(fus.new_tier);
                     current_score += fus.score_awarded;
                     run_stardust += fus.stardust_awarded as u64;
 
@@ -613,7 +645,7 @@ pub async fn game_main() {
                         fus.new_tier.primary_color(),
                         fus.new_tier as usize,
                     );
-                    let pts_label = format!("+{}", fus.score_awarded);
+                    let pts_label = format!("MERGE +{}", fus.score_awarded);
                     particles.add_floating_text(
                         pts_label,
                         fus.pos,
@@ -649,8 +681,8 @@ pub async fn game_main() {
                     let _ = save_mgr.save(&save_data);
                     if !billing.is_ad_removed()
                         && save_data.runs_played.is_multiple_of(INTERSTITIAL_RUN_INTERVAL)
+                        && ads.start_interstitial_ad()
                     {
-                        ads.start_interstitial_ad();
                         game_state = GameState::WatchingAd;
                     } else {
                         game_state = GameState::GameOver;
@@ -665,6 +697,8 @@ pub async fn game_main() {
                 sector_complete_timer += dt;
                 if tap && hit(ptr, 90.0, 674.0, 540.0, 48.0) {
                     name_focused = true;
+                    #[cfg(target_os = "android")]
+                    macroquad::miniquad::window::show_keyboard(true);
                 }
                 if name_focused {
                     if is_key_pressed(KeyCode::Backspace) {
@@ -699,7 +733,8 @@ pub async fn game_main() {
                     danger_timer = 0.0;
                     ability_charges = 0;
                     drop_cooldown = 0.0;
-                    next_tier = CelestialTier::random_spawn_tier(current_score);
+                    drop_pool = DropPool::default();
+                    next_tier = drop_pool.random_tier();
                     is_aiming = false;
                     game_state = GameState::Playing;
                 }
@@ -750,10 +785,15 @@ pub async fn game_main() {
                     .collect();
             }
 
-            leaderboard.poll();
-            if !leaderboard.status.is_empty() {
-                leaderboard_status = leaderboard.status.clone();
-            }
+        }
+        leaderboard.poll();
+        if !leaderboard.status.is_empty() {
+            leaderboard_status = leaderboard.status.clone();
+        }
+        #[cfg(target_os = "android")]
+        if !matches!(game_state, GameState::GameOver | GameState::SectorComplete) && name_focused {
+            macroquad::miniquad::window::show_keyboard(false);
+            name_focused = false;
         }
 
         // Recreate high-resolution render target when display dimensions or scale change
@@ -783,7 +823,6 @@ pub async fn game_main() {
 
         let mut go_action = GameOverAction::None;
         let mut shop_action = ShopAction::None;
-        let mut ad_result = MockAdResult::None;
         let mut sector_submit = false;
         let web_submit = crate::core::web_bridge::take_submit_request();
 
@@ -793,6 +832,10 @@ pub async fn game_main() {
                 let cx = VIRTUAL_WIDTH * 0.5;
 
                 // Title Banner
+                if ad_bridge::privacy_options_required() {
+                    draw_rectangle(VIRTUAL_WIDTH - 210.0, 20.0, 190.0, 44.0, Color::new(0.12, 0.18, 0.28, 1.0));
+                    draw_centered("AD PRIVACY", VIRTUAL_WIDTH - 115.0, 50.0, 18.0, WHITE, f);
+                }
                 draw_rectangle(
                     40.0,
                     VIRTUAL_HEIGHT * 0.16,
@@ -1504,6 +1547,8 @@ pub async fn game_main() {
                     run_stardust,
                     revives_used < FREE_REVIVES_PER_RUN,
                     stardust_doubled,
+                    ads.is_rewarded_ready(),
+                    &ad_status,
                     &save_data.public_name,
                     &leaderboard_status,
                     ptr,
@@ -1532,33 +1577,30 @@ pub async fn game_main() {
 
             // ── Ad Overlay ───────────────────────────────────────────────────
             GameState::WatchingAd => {
-                let reward_label = if revives_used == 0 {
-                    "Sector Revival"
-                } else {
-                    "2x Stardust"
-                };
-                ad_result = MockAdOverlay::draw(
-                    ads.get_ad_time_remaining(),
-                    5.0,
-                    reward_label,
-                    ptr,
-                    tap,
-                    f,
-                );
+                AdOverlay::draw(f);
             }
         }
 
         // ── Resolve Modal Actions ────────────────────────────────────────────
         match go_action {
             GameOverAction::WatchAdRevive => {
-                ads.start_rewarded_ad(RewardType::EventHorizonRevive);
-                game_state = GameState::WatchingAd;
+                if ads.start_rewarded_ad(RewardType::EventHorizonRevive) {
+                    ad_status.clear();
+                    game_state = GameState::WatchingAd;
+                } else {
+                    ad_status = "Ad unavailable. Please try again later.".to_string();
+                }
             }
             GameOverAction::WatchAdDoubleStardust => {
-                ads.start_rewarded_ad(RewardType::DoubleStardust);
-                game_state = GameState::WatchingAd;
+                if ads.start_rewarded_ad(RewardType::DoubleStardust) {
+                    ad_status.clear();
+                    game_state = GameState::WatchingAd;
+                } else {
+                    ad_status = "Ad unavailable. Please try again later.".to_string();
+                }
             }
             GameOverAction::Restart => {
+                ad_status.clear();
                 let sec = &sectors[current_sector];
                 objective = ObjectiveTracker::new(sec.objective.clone());
                 bodies.clear();
@@ -1570,7 +1612,8 @@ pub async fn game_main() {
                 danger_timer = 0.0;
                 ability_charges = 0;
                 drop_cooldown = 0.0;
-                next_tier = CelestialTier::random_spawn_tier(current_score);
+                drop_pool = DropPool::default();
+                next_tier = drop_pool.random_tier();
                 is_aiming = false;
                 game_state = GameState::Playing;
             }
@@ -1652,30 +1695,6 @@ pub async fn game_main() {
             ShopAction::None => {}
         }
 
-        match ad_result {
-            MockAdResult::ClaimReward => {
-                if let Some(rw) = ads.skip_or_finish() {
-                    handle_reward(
-                        rw,
-                        &mut current_score,
-                        &mut run_stardust,
-                        &mut revives_used,
-                        &mut stardust_doubled,
-                        &mut bodies,
-                        &mut danger_timer,
-                        &mut save_data,
-                        &save_mgr,
-                        &mut game_state,
-                    );
-                }
-            }
-            MockAdResult::CancelEarly => {
-                ads.skip_or_finish();
-                game_state = GameState::GameOver;
-            }
-            MockAdResult::None => {}
-        }
-
         // ── Blit High-Resolution Target to Physical Screen ───────────────────
         set_default_camera();
         clear_background(Color::new(0.012, 0.012, 0.03, 1.0));
@@ -1731,9 +1750,6 @@ pub fn handle_reward(
             save_data.stardust += 250;
             let _ = save_mgr.save(save_data);
             *game_state = GameState::MainMenu;
-        }
-        RewardType::DebugAd => {
-            *game_state = GameState::GameOver;
         }
     }
 }

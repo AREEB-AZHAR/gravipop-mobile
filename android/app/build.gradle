@@ -3,20 +3,38 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def testAds = providers.gradleProperty('ads.testMode').getOrElse('true').toBoolean()
+def adAppId = providers.gradleProperty('ads.appId').getOrElse('')
+def rewardedUnit = providers.gradleProperty('ads.rewardedUnitId').getOrElse('')
+def interstitialUnit = providers.gradleProperty('ads.interstitialUnitId').getOrElse('')
+if (!testAds && (!adAppId.matches('ca-app-pub-\\d{16}~\\d{10}') ||
+        !rewardedUnit.matches('ca-app-pub-\\d{16}/\\d{10}') ||
+        !interstitialUnit.matches('ca-app-pub-\\d{16}/\\d{10}'))) {
+    throw new GradleException('Live ads require ads.appId, ads.rewardedUnitId and ads.interstitialUnitId. Use ads.testMode=true until your own IDs are available.')
+}
+def testAppId = 'ca-app-pub-3940256099942544~3347511713'
+def testRewardedUnit = 'ca-app-pub-3940256099942544/5224354917'
+def testInterstitialUnit = 'ca-app-pub-3940256099942544/1033173712'
+
 android {
     namespace 'com.gravipop.celestialmerge'
-    compileSdk 34
+    compileSdk 36
     ndkVersion '28.2.13676358'
 
     defaultConfig {
         applicationId "com.gravipop.celestialmerge"
         minSdk 24
-        targetSdk 34
+        targetSdk 35
         versionCode 1
         versionName "1.0.0"
+        manifestPlaceholders = [admobAppId: testAds ? testAppId : adAppId]
+        buildConfigField 'boolean', 'ADS_TEST_MODE', testAds.toString()
+        buildConfigField 'String', 'ADMOB_APP_ID', '"' + (testAds ? testAppId : adAppId) + '"'
+        buildConfigField 'String', 'ADMOB_REWARDED_UNIT_ID', '"' + (testAds ? testRewardedUnit : rewardedUnit) + '"'
+        buildConfigField 'String', 'ADMOB_INTERSTITIAL_UNIT_ID', '"' + (testAds ? testInterstitialUnit : interstitialUnit) + '"'
 
         ndk {
-            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+            abiFilters.addAll(providers.gradleProperty('gravipop.abis').getOrElse('arm64-v8a').split(','))
         }
     }
 
@@ -28,11 +46,20 @@ android {
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders = [admobAppId: testAppId]
+            buildConfigField 'boolean', 'ADS_TEST_MODE', 'true'
+            buildConfigField 'String', 'ADMOB_APP_ID', '"' + testAppId + '"'
+            buildConfigField 'String', 'ADMOB_REWARDED_UNIT_ID', '"' + testRewardedUnit + '"'
+            buildConfigField 'String', 'ADMOB_INTERSTITIAL_UNIT_ID', '"' + testInterstitialUnit + '"'
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    buildFeatures { buildConfig true }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -48,7 +75,8 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     // Google Mobile Ads (AdMob) SDK
-    implementation 'com.google.android.gms:play-services-ads:23.3.0'
+    implementation 'com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk:1.5.0'
+    implementation 'com.google.android.ump:user-messaging-platform:4.0.0'
     // Google Play Billing Client SDK
     implementation 'com.android.billingclient:billing-ktx:7.1.1'
 }

@@ -1,6 +1,5 @@
 /target
 **/*.rs.bk
-Cargo.lock
 *.apk
 *.aab
 __cargo_apk_main.tmp
@@ -19,6 +18,9 @@ android/local.properties
 gravipop_save.json
 node_modules/
 dist/
+.env
+.env.local
+.env.*.local
 web_screenshot*.png
 gameplay_screenshot*.png
 gameplay_dropped*.png
@@ -26,4 +28,3 @@ vite_app_screenshot*.png
 web/gravipop-mobile.wasm
 web/assets/
 web/mq_js_bundle.js
-

@@ -1,0 +1,6 @@
+# Copy these public ad identifiers to android/gradle.properties after creating
+# your AdMob app and rewarded/interstitial ad units. Debug always uses test ads.
+ads.testMode=true
+# ads.appId=ca-app-pub-YOUR_PUBLISHER_ID~YOUR_APP_ID
+# ads.rewardedUnitId=ca-app-pub-YOUR_PUBLISHER_ID/YOUR_REWARDED_UNIT
+# ads.interstitialUnitId=ca-app-pub-YOUR_PUBLISHER_ID/YOUR_INTERSTITIAL_UNIT

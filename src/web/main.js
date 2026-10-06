@@ -2,6 +2,17 @@ import { inject } from "@vercel/analytics";
 import { CELESTIAL_TIERS } from "./codex.js";
 
 inject();
+if (import.meta.env.VITE_LEADERBOARD_URL) {
+  window.GRAVIPOP_LEADERBOARD_URL = import.meta.env.VITE_LEADERBOARD_URL;
+}
+
+window.GravipopAds?.configure({
+  mode: import.meta.env.VITE_ADS_MODE || "test",
+  rewarded: import.meta.env.VITE_GOOGLE_AD_REWARDED_UNIT || "",
+  interstitial: import.meta.env.VITE_GOOGLE_AD_INTERSTITIAL_UNIT || "",
+  left: import.meta.env.VITE_GOOGLE_AD_SIDEBAR_LEFT_UNIT || "",
+  right: import.meta.env.VITE_GOOGLE_AD_SIDEBAR_RIGHT_UNIT || "",
+});
 
 // Populate Codex list
 const codexContainer = document.getElementById("codex-list");
@@ -12,7 +23,7 @@ if (codexContainer) {
       <div class="card-top">
         <span class="tier-dot" style="background-color: ${tier.color}; box-shadow: 0 0 8px ${tier.glow};"></span>
         <span class="tier-name">${tier.name}</span>
-        <span class="tier-pts">${tier.points}</span>
+        <span class="tier-pts" title="Points are awarded for merging, never for dropping a planet">${tier.points}</span>
       </div>
       <p class="card-desc">${tier.desc}</p>
     </div>

@@ -1,87 +1,85 @@
-#[allow(dead_code)]
+use super::ad_bridge;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RewardType {
     EventHorizonRevive,
     DoubleStardust,
     DailyChest,
-    DebugAd,
 }
 
-#[allow(dead_code)]
-pub trait AdService {
-    fn is_rewarded_ready(&self, reward: RewardType) -> bool;
-    fn start_rewarded_ad(&mut self, reward: RewardType);
-    fn start_interstitial_ad(&mut self);
-    fn is_ad_playing(&self) -> bool;
-    fn get_ad_time_remaining(&self) -> f32;
-    fn update(&mut self, dt: f32) -> Option<RewardType>;
-    fn skip_or_finish(&mut self) -> Option<RewardType>;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AdOutcome {
+    RewardEarned(RewardType),
+    Closed,
+    RewardSkipped,
+    Unavailable,
 }
 
-pub struct MockAdService {
-    active_reward: Option<RewardType>,
-    timer: f32,
-    duration: f32,
-    is_interstitial: bool,
+#[derive(Clone, Copy)]
+struct AdRequest {
+    id: u32,
+    reward: Option<RewardType>,
 }
 
-impl Default for MockAdService {
-    fn default() -> Self {
-        Self::new()
-    }
+/// Rewards come only from the SDK's earned-reward callback, after the ad closes.
+/// Request IDs ensure delayed callbacks cannot reward a different run or ad.
+#[derive(Default)]
+pub struct PlatformAdService {
+    serial: u32,
+    active: Option<AdRequest>,
 }
 
-impl MockAdService {
+impl PlatformAdService {
     pub fn new() -> Self {
-        Self {
-            active_reward: None,
-            timer: 0.0,
-            duration: 5.0, // 5-second simulated video ad
-            is_interstitial: false,
-        }
+        Self::default()
     }
-}
 
-impl AdService for MockAdService {
-    fn is_rewarded_ready(&self, _reward: RewardType) -> bool {
+    pub fn is_rewarded_ready(&self) -> bool {
+        self.active.is_none() && ad_bridge::is_ready(true)
+    }
+
+    pub fn start_rewarded_ad(&mut self, reward: RewardType) -> bool {
+        self.start(Some(reward))
+    }
+
+    pub fn start_interstitial_ad(&mut self) -> bool {
+        self.start(None)
+    }
+
+    fn start(&mut self, reward: Option<RewardType>) -> bool {
+        if self.active.is_some() || !ad_bridge::is_ready(reward.is_some()) {
+            return false;
+        }
+        self.serial = self.serial.wrapping_add(1).max(1);
+        if !ad_bridge::show(self.serial, reward.is_some()) {
+            return false;
+        }
+        self.active = Some(AdRequest {
+            id: self.serial,
+            reward,
+        });
         true
     }
 
-    fn start_rewarded_ad(&mut self, reward: RewardType) {
-        self.active_reward = Some(reward);
-        self.timer = self.duration;
-        self.is_interstitial = false;
+    pub fn update(&mut self) -> Option<AdOutcome> {
+        let request = self.active?;
+        self.finish(request.id, ad_bridge::poll(request.id))
     }
 
-    fn start_interstitial_ad(&mut self) {
-        self.active_reward = Some(RewardType::DebugAd);
-        self.timer = 3.0;
-        self.is_interstitial = true;
-    }
-
-    fn is_ad_playing(&self) -> bool {
-        self.active_reward.is_some()
-    }
-
-    fn get_ad_time_remaining(&self) -> f32 {
-        self.timer
-    }
-
-    fn update(&mut self, dt: f32) -> Option<RewardType> {
-        if self.active_reward.is_some() {
-            self.timer -= dt;
-            if self.timer <= 0.0 {
-                let reward = self.active_reward.take();
-                return reward;
-            }
+    fn finish(&mut self, request_id: u32, result: i32) -> Option<AdOutcome> {
+        let request = self.active?;
+        if result == 0 || request_id != request.id {
+            return None;
         }
-        None
-    }
-
-    fn skip_or_finish(&mut self) -> Option<RewardType> {
-        let reward = self.active_reward.take();
-        self.timer = 0.0;
-        reward
+        self.active = None;
+        Some(match result {
+            1 => request
+                .reward
+                .map_or(AdOutcome::Closed, AdOutcome::RewardEarned),
+            2 if request.reward.is_some() => AdOutcome::RewardSkipped,
+            2 => AdOutcome::Closed,
+            _ => AdOutcome::Unavailable,
+        })
     }
 }
 
@@ -89,32 +87,58 @@ impl AdService for MockAdService {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_mock_ad_reward_cycle() {
-        let mut service = MockAdService::new();
-        assert!(!service.is_ad_playing());
-
-        service.start_rewarded_ad(RewardType::EventHorizonRevive);
-        assert!(service.is_ad_playing());
-        assert_eq!(service.get_ad_time_remaining(), 5.0);
-
-        // Advance 2 seconds
-        let reward = service.update(2.0);
-        assert_eq!(reward, None);
-        assert!(service.is_ad_playing());
-
-        // Advance remaining 3.5 seconds
-        let reward = service.update(3.5);
-        assert_eq!(reward, Some(RewardType::EventHorizonRevive));
-        assert!(!service.is_ad_playing());
+    fn pending(reward: Option<RewardType>) -> PlatformAdService {
+        PlatformAdService {
+            serial: 7,
+            active: Some(AdRequest { id: 7, reward }),
+        }
     }
 
     #[test]
-    fn test_mock_ad_skip_claim() {
-        let mut service = MockAdService::new();
-        service.start_rewarded_ad(RewardType::DoubleStardust);
-        let reward = service.skip_or_finish();
-        assert_eq!(reward, Some(RewardType::DoubleStardust));
-        assert!(!service.is_ad_playing());
+    fn confirmed_reward_keeps_the_requested_reward_type_and_is_consumed_once() {
+        for reward in [
+            RewardType::EventHorizonRevive,
+            RewardType::DoubleStardust,
+            RewardType::DailyChest,
+        ] {
+            let mut ads = pending(Some(reward));
+            assert_eq!(ads.finish(7, 1), Some(AdOutcome::RewardEarned(reward)));
+            assert_eq!(ads.finish(7, 1), None);
+        }
+    }
+
+    #[test]
+    fn closing_early_or_failing_never_awards_a_reward() {
+        assert_eq!(
+            pending(Some(RewardType::DoubleStardust)).finish(7, 2),
+            Some(AdOutcome::RewardSkipped)
+        );
+        assert_eq!(
+            pending(Some(RewardType::EventHorizonRevive)).finish(7, 3),
+            Some(AdOutcome::Unavailable)
+        );
+    }
+
+    #[test]
+    fn interstitial_completion_never_awards_a_gameplay_reward() {
+        assert_eq!(pending(None).finish(7, 1), Some(AdOutcome::Closed));
+    }
+
+    #[test]
+    fn stale_callbacks_and_waiting_cannot_complete_the_current_request() {
+        let mut ads = pending(Some(RewardType::DoubleStardust));
+        assert_eq!(ads.finish(6, 1), None);
+        assert_eq!(ads.finish(7, 0), None);
+        assert_eq!(
+            ads.finish(7, 1),
+            Some(AdOutcome::RewardEarned(RewardType::DoubleStardust))
+        );
+    }
+
+    #[test]
+    fn unsupported_desktop_ads_fail_without_simulating_a_reward() {
+        let mut ads = PlatformAdService::new();
+        assert!(!ads.start_rewarded_ad(RewardType::DoubleStardust));
+        assert_eq!(ads.update(), None);
     }
 }

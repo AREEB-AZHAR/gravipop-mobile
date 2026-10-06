@@ -11,6 +11,8 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 quad-rand = "0.2"
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq = { version = "3.4", default-features = false, features = ["rustls", "json"] }
 
 [lib]
 name = "gravipop_mobile"

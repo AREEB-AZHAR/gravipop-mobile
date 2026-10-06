@@ -1,302 +1,252 @@
-# 🌌 GraviPop: Stellar Conservatory
+# GraviPop: Stellar Conservatory
 
-> **A high-performance hybrid-casual cosmic merge puzzle game built in pure Rust & WebAssembly.**
-> Zero garbage collection pauses, instant sub-second cold starts, zero engine bloat, and universal compatibility across Desktop, Mobile (Android), and Web (Vite).
+A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, and desktop.
 
----
+**[Play GraviPop](https://graviity-zeta.vercel.app/)** · [Game source](src/lib.rs) · [Android app](android/app) · [Shared leaderboard API](api/leaderboard.js)
 
-## 📸 Screenshots & Live Interface
+## Recent updates
 
-| Title Screen (Upright & Razor Sharp) | Active Gameplay (Retina Vector Projection) | Natural Curvature Roll-Off Physics | Global Leaderboard (Live Persistence) |
-| :---: | :---: | :---: | :---: |
-| ![Title Screen](docs/screenshots/title_screen_verified.png) | ![Active Gameplay](docs/screenshots/gameplay_active_verified.png) | ![Physics Roll Off](docs/screenshots/test_roll_off_physics.png) | ![Global Leaderboard](docs/screenshots/leaderboard_screen_verified.png) |
+- **One result-screen save action.** Game Over and Sector Complete center scores and rewards. **Save Score & Return Home** validates the callsign, saves progress, submits once, and returns home. The web textbox has no duplicate submit button; Enter uses the same action.
+- **Merge-based drops.** Every new run starts with Asteroid, Moon, and Earth, weighted 60:30:10. Merging two Saturns into an Ice Giant adds Jupiter. Each new highest merged planet then adds the next drop tier. Score and historical best score never unlock drops.
+- **Rare larger planets.** Jupiter starts at approximately 0.1% of drops, increasing to approximately 0.6% after 100 further merges. Each larger tier is rarer; all larger drops together remain below 2%. Unlocks reset on a new run and survive a revive. Quasar and Cosmic Core are merge-only.
+- **Merge-only points.** Drops and landings award no points. Score popups explicitly say **MERGE +…**, and every planet tier has a regression check for landing without scoring.
+- **Real ads.** Google Publisher Tag supplies web rewarded ads, interstitials, and two responsive sidebar placements. Android uses Google's Next-Gen Mobile Ads SDK. Rewards require its earned-reward callback and are granted once after closing; cancellations and failures grant nothing.
+- **Shared leaderboard on every build.** Web, Android, and desktop use the same API. Native HTTPS requests run on a background worker; Android supports callsign keyboard input and saves in app-private storage.
+- **Reliable Android builds.** The Rust library is compiled with NDK 28.2, then packaged by Gradle with the matching Miniquad Java host and ad SDK. This replaces the outdated cargo-quad-apk workflow that rejects version-4 Cargo.lock files.
+- **Vercel Analytics.** The Vite entry point initializes the official analytics client once.
 
-| Live Vercel Production Title | Live Vercel Active Merge Arena | Verified Mobile Title Touch | Verified Mobile Live Arena | Verified Mobile Global Leaderboard |
-| :---: | :---: | :---: | :---: | :---: |
-| ![Vercel Live Screen](docs/screenshots/vercel_live_verified.png) | ![Vercel Live Gameplay](docs/screenshots/vercel_gameplay_verified.png) | ![Mobile Title](docs/screenshots/mobile_title_verified.png) | ![Mobile Gameplay](docs/screenshots/mobile_gameplay_verified.png) | ![Mobile Leaderboard](docs/screenshots/mobile_leaderboard_verified.png) |
+## Screenshots
 
----
+These are real browser captures. Google demo inventory is labeled as test advertising and does not earn revenue.
 
-## 🚀 Recent Accomplishments & System Upgrades
+| Desktop with Google test ads | Mobile layout |
+| :---: | :---: |
+| ![Google test ads in the empty game margins](docs/screenshots/google_test_ads_verified.jpg) | ![Mobile title screen](docs/screenshots/mobile_title_verified.png) |
 
-- **Unified End-Run Save Flow & Centered Results**:
-  - Removed the duplicate HTML submit button beside the callsign field. Game Over and Sector Complete now present one clear primary action: **Save Score & Return Home**; pressing `Enter` performs the same action.
-  - Centered the final score, best-score state, stardust reward, player name, and validation/status text so both result screens share one readable hierarchy on desktop and mobile.
-  - Reused one callsign validator on every result screen, persisted the player save before leaderboard submission, and kept the player on the result screen with a recovery message if validation or local storage fails.
+| Gameplay | Shared leaderboard |
+| :---: | :---: |
+| ![Merge gameplay](docs/screenshots/vercel_gameplay_verified.png) | ![Leaderboard](docs/screenshots/leaderboard_screen_verified.png) |
 
-- **Progressive Large-Shape Drop Pool**:
-  - Expanded the merge chain from 10 to 13 celestial forms with the **Nebula**, **Quasar**, and **Cosmic Core**, each with a distinct procedural vector silhouette.
-  - Higher tiers unlock from score milestones with a deliberately low initial drop weight. Their frequency grows gradually as the run advances while small bodies remain the majority of drops.
+## Clone and prerequisites
 
-- **Vercel Web Analytics**:
-  - Installed the official `@vercel/analytics` client and initialized `inject()` once in the Vite entry point.
-  - Production deployments now report privacy-friendly page views and visitors to the Vercel Analytics dashboard after the site receives traffic.
+~~~powershell
+git clone https://github.com/AREEB-AZHAR/gravipop-mobile.git
+cd gravipop-mobile
+~~~
 
-- **Mobile Canvas Touch Input Normalization (100% Resolved)**:
-  - **Root Cause of Unresponsive Mobile Buttons**: In Macroquad's WebAssembly backend, `touches()` delivers coordinates in raw physical device pixels (`clientX * dpi_scale`), whereas screen bounds (`screen_width()`, `screen_height()`) and `mouse_position()` are already divided by `dpi_scale` (CSS viewport pixels). On modern mobile devices with high pixel ratios (Retina DPR $2.0$ to $3.0+$), `touches()` coordinates were 2× to 3× offset, placing the interaction pointer thousands of pixels off the canvas and causing all hit tests on the **Start Game**, **Cosmetics Store**, and **Global Leaderboard** buttons to fail.
-  - **DPI Normalization in Rust (`src/lib.rs`)**: Divided `t.position` by `macroquad::miniquad::window::dpi_scale().max(1.0)` so touch coordinates align pixel-for-pixel with virtual game coordinates.
-  - **Persistent Pointer State & Multi-Phase Tap Recognition**: Added `last_pointer_pos` state persistence and expanded `tap` detection to `mouse_pressed || touch_started || touch_ended`, ensuring instantaneous response whether tapping quickly or lifting fingers on mobile touchscreens.
-  - **Dual-Channel Event Forwarding in `mq_js_bundle.js`**: Patched `touchstart`, `touchmove`, `touchend`, and `touchcancel` handlers to dispatch both native WebAssembly touch events and simulated mouse down/move/up events, guaranteeing universal compatibility across iOS Safari, Android Chrome, and embedded mobile WebViews.
+| Tool | Requirement |
+| :--- | :--- |
+| Node.js | 22+ recommended; package requires 18+ |
+| Rust / Cargo | Current stable; checked with Rust 1.97.1 |
+| Web target | wasm32-unknown-unknown when rebuilding game code |
+| Windows desktop compiler | Visual Studio Build Tools, Desktop development with C++ |
+| Android only | SDK platform 36, Build Tools 35.0.0, NDK 28.2.13676358, JDK 21 |
 
-- **Universal Global Shared Leaderboard Backend (`/api/leaderboard`)**:
-  - **Shared Player Records Across All Devices**: Previously, unconfigured environments fell back strictly to isolated `localStorage`, meaning players on different devices could not see each other's scores.
-  - **Serverless API Route (`api/leaderboard.js`)**: Implemented a dedicated Vercel Serverless Function providing zero-configuration, universally synchronized global leaderboards.
-  - **Secure Server-Side Proxying**: Solved browser mixed-content restrictions (`http://` vs `https://`) by performing cloud updates server-side while hiding credentials from client code.
-  - **Vite Dev Server Integration (`vite.config.js`)**: Configured local development middleware so `/api/leaderboard` behaves identically in local development and production.
-  - **Instant Live Synchronization**: Newly submitted commander scores are saved locally and immediately synced globally so all players worldwide see updated rankings upon opening the leaderboard.
+~~~powershell
+rustup update stable
+rustup target add wasm32-unknown-unknown
+npm ci
+~~~
 
-- **Physics Engine Overhaul: Curvature Roll-Off & Unstable Equilibrium Apex Break**:
-  - **The "Weird Stacking" Physics Problem**: Previously, spherical celestial bodies could land vertically atop one another and balance in an unnatural, static vertical totem pole because vertical contact normals generated zero horizontal acceleration ($F_x = 0$).
-  - **Apex Perturbation (Break Unstable Equilibrium)**: When a large celestial body drops near the apex of a smaller body ($|\Delta x| < 3.5\text{px}$ and $R_{\text{top}} \ge 0.75 R_{\text{bot}}$), the solver introduces a deterministic micro-perturbation ($\pm 0.08$ normal tilt), tipping the body toward the closest shoulder.
-  - **Dynamic Slope Roll Acceleration**: Downward gravitational acceleration along the curved contact normal imparts tangential rolling velocity:
-    $$\vec{F}_{\text{roll}} = g \cdot \sin(\theta) \cos(\theta) \cdot \frac{R_{\text{top}}}{R_{\text{bot}}}$$
-    This correctly models spherical curvature: bodies slide and roll dynamically down the flanks of smaller bodies into natural resting crevices.
-  - **Rolling Friction Normalization**: Reduced inter-sphere friction impulse damping from $0.32$ to $0.12$ so spherical bodies roll smoothly rather than sticking artificially in mid-air.
-  - **Automated Physics Validation**: Validated via unit test `large_planet_rolls_off_small_planet_unstable_apex` with 100% pass rate (`cargo test`).
+Compiled web assets are included, so Rust is unnecessary for running the existing web build. Install Rust to edit or rebuild the game. Linux desktop builds also need the platform libraries documented by [Macroquad](https://github.com/not-fl3/macroquad).
 
-- **High-DPI Razor-Sharp Rendering Pipeline (Blurriness Eliminated)**:
-  - **Root Cause of Visual Blurriness**:
-    1. *Fixed 720×1280 Texture Upscaling*: The game previously rendered into a static $720 \times 1280$ offscreen texture with `FilterMode::Linear`, which was then bilinearly stretched across 1080p, 1440p, and 4K displays.
-    2. *Macroquad WebGL DPI Clamping*: Macroquad's WebGL runtime clamped `dpi_scale()` to `1.0` unless an undocumented internal flag was set, ignoring high-DPI Retina/smartphone screens.
-  - **Dynamic 1:1 Physical Pixel Render Target**: The render target is now dynamically allocated to match the screen's exact physical pixel dimensions (`target_w = (VIRTUAL_WIDTH * scale).round()`, `target_h = (VIRTUAL_HEIGHT * scale).round()`).
-  - **Correct Camera Projection**: Configured `Camera2D` with positive zoom (`vec2(2.0 / VIRTUAL_WIDTH, 2.0 / VIRTUAL_HEIGHT)`) and `flip_y: false` to ensure vector graphics, text, and celestial bodies render 100% upright and razor-sharp on both desktop and mobile.
-  - **CSS Sub-Pixel Crisp Scaling**: Added `image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;` to eliminate browser resampling blur.
+## Web development and deployment
 
-- **Game Over Callsign Input Alignment & Unified Save Flow**:
-  - **Sub-Pixel Coordinate Alignment**: Resolved the misplaced name input field. The HTML input was previously offset by `rect.left` (+300px sidebar width) while already inside a `position: relative` canvas wrapper. By binding coordinates directly to `ox + x * scale` and `oy + y * scale`, the callsign input field aligns pixel-for-pixel over the modal prompt.
-  - **One Primary Action**: The DOM overlay contains only the full-width callsign input. The centered canvas action validates and saves the callsign, records the score, and returns home; the `Enter` key routes through that exact same action.
-  - **Offline & Local Leaderboard Fallback**: When Supabase credentials are not configured, scores are instantly validated and saved to `localStorage` (`gravipop.local_leaderboard`) with immediate status confirmation (`"✓ Score recorded to commander records!"`). When Supabase is configured, scores synchronize to the global cloud leaderboard.
-
-- **Android Studio & Eclipse Buildship Gradle Integration**:
-  - Configured `android/.settings/org.eclipse.buildship.core.prefs` and `android/app/.settings/org.eclipse.buildship.core.prefs` with `connection.project.dir=..` to eliminate VS Code Language Server ResourceExceptions.
-  - Verified clean Android build execution via `gradle: app:assemble` (`BUILD SUCCESSFUL in 3s`).
-
-- **Modern Vite Web Application Shell (Resolved & Configured)**:
-  - **Instant Sub-Second HMR & Dev Server**: Replaced the static server setup with a first-class **Vite** web application. Developers and players can run `npm run dev` for instant 300ms startup at `http://localhost:3000`.
-  - **Zero-Friction Macroquad WASM Integration**: Eliminated the fatal `TypeError: Import #1 "__wbindgen_placeholder__"` crash caused by mixing `wasm-bindgen` with Macroquad. Implemented a clean, zero-overhead Web FFI bridge (`src/core/web_bridge.rs` & `web/gravipop_web.js`) utilizing Miniquad's native plugin architecture.
-  - **Strict-Mode Loader Fix**: Fixed the upstream strict-mode `ReferenceError: register_plugin is not defined` bug in Macroquad's bundled `mq_js_bundle.js`, ensuring 100% clean browser console execution with zero errors or warnings.
-  - **Ultra-Premium Cosmic Design System**: Surrounding the WebGL game canvas is a responsive glassmorphic dashboard:
-    - **Celestial Codex (Left Wing)**: Live interactive cards detailing all 13 celestial tiers (Asteroid to Cosmic Core), score yields, and cosmic lore.
-    - **Mission Control (Right Wing)**: Keyboard shortcuts cheatsheet (`←`/`→`/`A`/`D`, `Space`, `1`, `2`, `P`/`Esc`, `F` for fullscreen) and live engine specifications.
-    - **Header Bar**: Live synchronized Stardust balance and High Score pill trackers reading in real-time from `localStorage`.
-    - **Mobile Responsive Drawers**: On mobile viewports (< 1180px), side wings gracefully tuck away into floating glassmorphic buttons so the game canvas claims 100% full-screen immersive focus.
-
-- **Physics & Merge Engine Overhaul (100% Resolved)**:
-  - **Immediate Surface Touch Merging**: Replaced interpenetration thresholds with a robust surface contact detector (`dist <= contact * 1.02`). Same-tier celestial bodies fuse reliably upon touching, whether falling, rolling, or resting side-by-side.
-  - **Unstable Vertical Equilibrium Break (Totem Pole Fix)**: When celestial spheres land vertically atop one another (`dx ≈ 0`), the engine applies a lateral slope perturbation to the collision normal and imparts rolling velocity. Spheres realistically slide and roll down curved shoulders into resting crevices.
-  - **Zero Floor & Wall Tunneling**: Implemented post-solver boundary clamping (`JAR_LEFT`, `JAR_RIGHT`, `JAR_BOTTOM`) for all bodies. Settled bodies at the bottom of the container are held firmly above the container line without a single pixel protruding.
-  - **Micro-Velocity Sleep**: Added resting velocity damping to prevent jitter at the bottom of heavy stacks.
-
-- **Celestial Tier Visual Redesign (13 Unique Visual Identities)**:
-  - **Asteroid**: Craggy dark basalt rock with 3 distinct crater pits and molten amber mineral veins.
-  - **Moon**: Silvery regolith with dark lunar maria basalt seas, rayed impact craters, and crisp terminator rim lighting.
-  - **Earth (Terrestrial)**: Deep azure oceans, emerald continental landmasses, polar ice caps, and dynamic swirling atmospheric cloud spirals.
-  - **Gas Giant (Jupiter)**: 5 alternating horizontal turbulent storm belts and an elliptical swirling **Great Red Spot** storm vortex.
-  - **Ringed Giant (Saturn)**: Golden sphere with **3D perspective dual-ring system** featuring depth occlusion and planetary shadow.
-  - **Ice Giant**: Crystalline turquoise glacial facets, geometric ice plates, and glowing neon-cyan auroral crowns at magnetic poles.
-  - **Red Dwarf**: Convective boiling solar granules and dynamic arching coronal prominences / pulsating solar flares.
-  - **Blue Supergiant**: Blinding white-hot thermonuclear core with 8 radiant cardinal starburst light rays and plasma filaments.
-  - **Pulsar (Magnetar)**: Ultra-dense violet neutron core with equatorial magnetic flux loops and **dual rotating relativistic radiation jets**.
-  - **Singularity**: Absolute pitch-black event horizon encircled by an **Einstein gravitational lensing photon ring** and an iridescent violet/gold relativistic accretion disk with Doppler boosting.
-  - **Nebula**: A magenta rosette of orbiting cloud lobes surrounding a luminous stellar nursery.
-  - **Quasar**: A rotating diamond frame around a brilliant turquoise core and white photon ring.
-  - **Cosmic Core**: A golden hexagonal shell with six radial energy beams and a white-hot center.
-
-- **Universal Cross-Ecosystem Normalization**:
-  - Dynamic virtual camera projection (`720 × 1280`) with automatic pillarbox/letterbox scaling. Preserves sharp aspect ratio across mobile displays and high-DPI desktop monitors.
-  - Unified input system supporting mouse clicks, multi-touch drag-to-aim with release-to-drop (`TouchPhase`), and full desktop keyboard controls.
-  - Zero-Glyph procedural vector icon architecture (`draw_vector_star`, `draw_vector_gem`, `draw_vector_play`, `draw_vector_pause`, `draw_vector_lock`, `draw_vector_close`).
-
----
-
-## 🎮 Game Controls Across Ecosystems
-
-| Action | Mobile (Touchscreen) | Desktop (Mouse & Keyboard) |
-| :--- | :--- | :--- |
-| **Aim Celestial Body** | Touch & slide finger across the jar | Move mouse or press `←` / `→` or `A` / `D` |
-| **Drop Body** | Release finger from screen | Release mouse button or press `Space` / `↓` |
-| **Trigger Gravity Wave** | Tap "GRAVITY WAVE" button | Click button or press `1` |
-| **Trigger Solar Flare** | Tap "SOLAR FLARE" button | Click button or press `2` |
-| **Pause / Resume** | Tap top-right pause icon | Click icon or press `P` / `Esc` |
-| **Toggle Fullscreen** | Tap floating fullscreen button | Click top-right ⛶ or press `F` |
-
----
-
-## 🌐 Web App Quickstart (Vite)
-
-The web application runs on **Vite**, delivering instant local development, live hot reloading, and optimized production builds.
-
-### 1. Prerequisites
-- **Node.js**: Version 18 or higher ([nodejs.org](https://nodejs.org/))
-- **Rust Toolchain**: Stable 1.70+ with the WebAssembly target:
-  ```bash
-  rustup target add wasm32-unknown-unknown
-  ```
-
-### 2. Install Dependencies
-```bash
-npm install
-```
-
-### 3. Run Locally (Vite Dev Server)
-```bash
+~~~powershell
 npm run dev
-```
-Open **`http://localhost:3000`** in your browser. The web app boots instantly with hot module replacement, cosmic glassmorphism panels, and the live WebAssembly game canvas.
+~~~
 
-### 4. Build for Production
-To recompile the Rust WASM release and bundle the web app:
-```bash
-npm run build:all
-```
-The optimized static bundle is output to `./dist/` and can be deployed anywhere (Vercel, Netlify, Cloudflare Pages, GitHub Pages, or Docker).
+Open **http://localhost:3000**. Vite serves the shell and local leaderboard API middleware. JavaScript/CSS changes reload during development. After editing Rust, run **npm run build:wasm** and reload the page.
 
-### 5. ☁️ Deploying to Vercel / Cloudflare / Netlify
-GraviPop is fully configured for zero-configuration cloud deployment:
-1. **Pre-Compiled WASM in `public/`**: Cloud platforms (Vercel, Netlify) build using standard Node.js containers without requiring a native Rust/Cargo toolchain. The pre-compiled WebAssembly binary and game assets reside in `public/` and are automatically copied to `dist/` by Vite during the build.
-2. **`vercel.json` Configuration**: Configured with `framework: "vite"`, `outputDirectory: "dist"`, and dedicated `application/wasm` headers.
-3. **Continuous Deployment**: Any push to `master` triggers automatic build and instant global CDN deployment on Vercel.
-4. **Web Analytics**: `src/web/main.js` initializes `@vercel/analytics` once. After deploying, visit the production site and allow roughly 30 seconds for the first page-view request to appear in the Vercel Analytics dashboard.
+~~~powershell
+npm run build:all  # Rust WASM, bridge files, then Vite production bundle
+npm run preview   # Static preview at http://localhost:8080
+~~~
 
-### 6. Preview Production Build
-```bash
-npm run preview
-```
-Runs a local preview of the production build at `http://localhost:8080`.
+Static preview has no local API middleware. Use the dev server to test API changes, or set VITE_LEADERBOARD_URL to the production API before building a static preview.
 
-### 7. (Optional) Supabase Global Leaderboard Configuration
-The web app features persistent anonymous player identity and global leaderboards. It runs out-of-the-box in local mode without credentials (saving scores to `localStorage`). To link a live Supabase leaderboard:
-1. Create a Supabase project and enable Anonymous Sign-Ins in Auth settings.
-2. Apply `supabase/migrations/202610050001_leaderboard.sql` in the Supabase SQL editor.
-3. Set your environment variables:
-   ```powershell
-   $env:GRAVIPOP_SUPABASE_URL = "https://YOUR_PROJECT_REF.supabase.co"
-   $env:GRAVIPOP_SUPABASE_ANON_KEY = "YOUR_PUBLIC_ANON_KEY"
-   ```
-4. Run `npm run dev`. The client automatically synchronizes scores to the global leaderboard.
+Vercel runs **npm run build**, consuming the committed binary in public/ without installing Rust. Rebuild and commit that binary when Rust changes. Pushing master triggers the linked project's deployment. Vercel hosts /api/leaderboard and Web Analytics; visit the deployed site to generate analytics traffic.
 
----
+For static-only hosting, copy .env.example to .env.local and set:
 
-## 🖥️ Desktop Quickstart (Windows, macOS, Linux)
+~~~dotenv
+VITE_LEADERBOARD_URL=https://graviity-zeta.vercel.app/api/leaderboard
+~~~
 
-1. **Install Rust**:
-   ```bash
-   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-   ```
-2. **Clone & Run**:
-   ```bash
-   git clone https://github.com/areeb-azhar/gravipop-mobile.git
-   cd gravipop-mobile
-   cargo run --release
-   ```
-3. **Run Automated Test Suite**:
-   ```bash
-   cargo test
-   ```
-   *(All 20 unit, physics, and progression tests pass with zero warnings).*
+Run npm run build after changing VITE_ variables, then deploy dist/.
 
----
+## Android APK build — PowerShell
 
-## 📱 Mobile APK Build (Android)
+Install JDK 21, Rust, Node, and Android Studio. In SDK Manager install **Android SDK Platform 36**, **Build-Tools 35.0.0**, and **NDK (Side by side) 28.2.13676358**. The project supplies Gradle 8.14 and Android Gradle Plugin 8.10.0.
 
-GraviPop uses `cargo-quad-apk` for 1-step Android builds:
+Use JDK 21 for this wrapper. Android Studio's bundled JBR can be Java 25, which Gradle 8.14 cannot run with. Set JAVA_HOME explicitly. These paths match this development machine; adjust them on another computer.
 
-### Prerequisites
-- Android SDK: `C:\Users\areeb\AppData\Local\Android\Sdk`
-- Android NDK: `C:\Users\areeb\AppData\Local\Android\Sdk\ndk\28.2.13676358`
-- `cargo-quad-apk` installed: `cargo install cargo-quad-apk`
-- Target added: `rustup target add aarch64-linux-android`
+~~~powershell
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-21.0.11"
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+$env:NDK_HOME = "$env:ANDROID_HOME\ndk\28.2.13676358"
+rustup target add aarch64-linux-android
+npm run build:android
+Push-Location android
+.\gradlew.bat :app:assembleDebug --console=plain
+Pop-Location
+~~~
 
-### Build Command (PowerShell)
-```powershell
-$env:NDK_HOME = "C:\Users\areeb\AppData\Local\Android\Sdk\ndk\28.2.13676358"
-$env:ANDROID_HOME = "C:\Users\areeb\AppData\Local\Android\Sdk"
-cargo quad-apk build --release
-```
-The signed APK will be output at:
-```text
-target/android-artifacts/release/apk/gravipop-mobile.apk
-```
+**Installable APK:** android/app/build/outputs/apk/debug/app-debug.apk. It is automatically debug-signed and uses official Google test ads. Install on an arm64 Android 7.0+ phone, or use:
 
----
+~~~powershell
+& "$env:ANDROID_HOME\platform-tools\adb.exe" install -r "android\app\build\outputs\apk\debug\app-debug.apk"
+~~~
 
-## 🏛️ Project Architecture & File Hierarchy
+Gradle locates the SDK from ANDROID_HOME. Alternatively create ignored android/local.properties with your SDK path, such as sdk.dir=C:/Users/areeb/AppData/Local/Android/Sdk. Do not commit local SDK paths or signing credentials.
 
-```text
-gravipop-mobile/
-├── assets/                             # Raw game assets (font, textures, icons)
-│   ├── font.ttf
-│   ├── celestial_atlas.jpg
-│   └── gravipop_icon.jpg
-├── docs/
-│   └── screenshots/                    # Captured gameplay & responsive screenshots
-│       ├── desktop_enlarged.png        # Full-height desktop interface
-│       ├── desktop_focus_mode.png      # Theater / Focus mode (100% canvas)
-│       ├── mobile_view.png             # Native 9:16 mobile portrait display
-│       ├── mobile_codex_drawer.png     # Slide-in Celestial Codex mobile drawer
-│       ├── mobile_gameplay.png         # In-game canvas layout on mobile
-│       ├── gameplay.png                # Cosmic particle fusion gameplay
-│       └── web_app.png                 # Initial Vite web app shell
-├── android/                            # Native Android Studio / Gradle project
-│   ├── .settings/                      # Eclipse Buildship IDE configuration
-│   ├── app/                            # Android application module
-│   │   ├── .settings/                  # Module IDE configuration
-│   │   └── build.gradle
-│   ├── build.gradle
-│   └── settings.gradle
-├── public/                             # Vite static assets (served at root)
-│   ├── assets/
-│   ├── env.js                          # Runtime environment configuration
-│   ├── gravipop_web.js                 # Miniquad JS FFI bridge (storage, DOM, leaderboard)
-│   ├── gravipop-mobile.wasm            # Compiled Rust WebAssembly release binary
-│   └── mq_js_bundle.js                 # Macroquad runtime with strict-mode patch
-├── src/
-│   ├── main.rs                         # Desktop executable entry point
-│   ├── lib.rs                          # Universal game loop, input normalization, quad_main
-│   ├── core/
-│   │   ├── config.rs                   # Virtual canvas, physical dimensions, deconflicted layout
-│   │   ├── game_state.rs               # State machine (MainMenu, GalaxyMap, Playing, Paused, etc.)
-│   │   ├── leaderboard.rs              # Leaderboard client delegating to web FFI
-│   │   ├── save_system.rs              # Progression, stardust economy, sector stars
-│   │   ├── sector.rs                   # 15 authored sectors across 3 chapters, objective tracker
-│   │   ├── web_bridge.rs               # Zero-overhead extern "C" WebAssembly FFI bridge
-│   │   └── mod.rs
-│   ├── physics/
-│   │   ├── celestial_tier.rs           # 13 cosmic tiers (Asteroid → Cosmic Core)
-│   │   ├── body.rs                     # Verlet integration, restitution, angular spin
-│   │   ├── collision.rs                # Surface contact detector & slope perturbation solver
-│   │   └── mod.rs
-│   ├── graphics/
-│   │   ├── icons.rs                    # Procedural vector drawing (stars, gems, locks, arrows)
-│   │   ├── renderer.rs                 # Body aura, rings, atmospheric glow shaders
-│   │   ├── particles.rs                # Cosmic dust bursts, fusion sparks, floating score text
-│   │   ├── starfield.rs                # Parallax star layers and danger red-shift pulse
-│   │   └── mod.rs
-│   ├── audio/
-│   │   ├── sound_synthesizer.rs        # In-memory WAV harmonic bell synthesis & victory chimes
-│   │   └── mod.rs
-│   ├── monetization/
-│   │   ├── ads.rs                      # Rewarded & Interstitial ad state handlers
-│   │   ├── billing.rs                  # IAP billing verification (Remove Ads, Star Pass)
-│   │   ├── economy.rs                  # Catalog of items, packs, and cosmic skins
-│   │   └── mod.rs
-│   ├── ui/
-│   │   ├── hud.rs                      # Objective banner, score, danger alert
-│   │   ├── game_over_modal.rs          # Overflow summary, leaderboard submission, retry
-│   │   ├── shop_modal.rs               # Cosmic store modal with skins & IAP
-│   │   ├── mock_ad_overlay.rs          # Ad viewing simulation overlay
-│   │   └── mod.rs
-│   └── web/                            # Modern Vite web application UI shell
-│       ├── codex.js                    # Metadata for all 13 celestial tiers
-│       ├── main.js                     # Analytics, HUD reactivity, fullscreen, drawers
-│       └── style.css                   # Glassmorphic cosmic design system
-├── index.html                          # Root Vite HTML with responsive game viewport
-├── vite.config.js                      # Vite build & dev server configuration
-├── package.json                        # Node.js dependencies & npm scripts
-├── scripts/
-│   ├── build-wasm.mjs                  # 1-step Rust WASM compilation & glue sync
-│   ├── build-web.mjs                   # Unified build (WASM -> Vite production)
-│   └── build-web.ps1                   # PowerShell build pipeline
-├── Cargo.toml                          # Rust dependencies manifest
-└── gravipop_save.json                  # Desktop save file
-```
+For an x86_64 emulator, compile matching Rust targets and set matching Gradle ABI filters:
+
+~~~powershell
+rustup target add aarch64-linux-android x86_64-linux-android
+npm run build:android -- --abis=arm64-v8a,x86_64
+Push-Location android
+.\gradlew.bat :app:assembleDebug -Pgravipop.abis=arm64-v8a,x86_64
+Pop-Location
+~~~
+
+For a store bundle, run :app:bundleRelease and configure your own release signing in Android Studio. Release artifacts are unsigned until signing is configured. APKs, bundles, local SDK paths, and build directories are ignored by Git.
+
+### The Cargo.lock version-4 error
+
+cargo-quad-apk 0.1.4 embeds an older Cargo parser that rejects modern lockfiles. Updating your normal Cargo executable alone does not replace that parser. Keep the valid lockfile and use **npm run build:android → Gradle**. This also packages the Kotlin ad integration, which a standalone cargo-quad-apk build would omit.
+
+scripts/build-android.mjs copies the Java host from the exact Miniquad dependency linked into Rust, compiles the JNI library, and copies it into jniLibs/. It sets NDK C compiler/archive paths for the HTTPS dependency and 16 KB ELF page alignment.
+
+## Ads: test now, live after publisher setup
+
+No production ad IDs have been supplied. The game uses **actual SDK-served Google test ads**, which generate no income. Native desktop builds have no ad provider; rewarded actions remain unavailable there.
+
+### Website
+
+Copy .env.example to .env.local. VITE_ADS_MODE accepts **test** (default), **off**, or **live**.
+
+~~~dotenv
+VITE_ADS_MODE=test
+VITE_GOOGLE_AD_REWARDED_UNIT=
+VITE_GOOGLE_AD_INTERSTITIAL_UNIT=
+VITE_GOOGLE_AD_SIDEBAR_LEFT_UNIT=
+VITE_GOOGLE_AD_SIDEBAR_RIGHT_UNIT=
+~~~
+
+Live mode requires your own **Google Ad Manager ad-unit paths**, such as /NETWORK_CODE/UNIT_NAME, rather than AdMob IDs or an AdSense publisher ID. Configure rewarded and gaming-interstitial inventory in your account; the gaming interstitial format requires account access. Configure your publisher's consent message / certified CMP before live inventory and include its generated tag in index.html. Android UMP does not manage website consent.
+
+Add the VITE_ values in Vercel and redeploy. Missing live unit paths never fall back to Google's demo inventory.
+
+Sidebar creatives appear only when they fit in empty margins beside the 9:16 game. They hide on narrow screens, failed/no-fill requests, and no-ads saves. They do not cover gameplay or mobile controls. Interstitials use the existing run interval; unavailable ads do not block results. Rewarded ads remain player-selected.
+
+References: [rewarded web sample](https://developers.google.com/publisher-tag/samples/display-rewarded-ad), [gaming interstitial sample](https://developers.google.com/publisher-tag/samples/display-gaming-interstitial-ad), [publisher consent settings](https://support.google.com/admanager/answer/7673898).
+
+### Android
+
+The app uses **Next-Gen Mobile Ads SDK 1.5.0** and **User Messaging Platform 4.0.0**. Load/show/dismiss callbacks connect to Rust through JNI; each reward carries its original request ID.
+
+Debug builds always use test inventory. Release builds also default to tests until ads.testMode=false and your own IDs are configured. Copy public values from android/ads.properties.example into android/gradle.properties:
+
+~~~properties
+ads.testMode=false
+ads.appId=ca-app-pub-YOUR_PUBLISHER_ID~YOUR_APP_ID
+ads.rewardedUnitId=ca-app-pub-YOUR_PUBLISHER_ID/YOUR_REWARDED_UNIT
+ads.interstitialUnitId=ca-app-pub-YOUR_PUBLISHER_ID/YOUR_INTERSTITIAL_UNIT
+~~~
+
+The live build rejects missing or malformed IDs. Create and publish AdMob consent messages before enabling live mode. The app requests consent and loads ads only when UMP permits; **Ad Privacy** appears when privacy options are required. Preloaded ads expire before an hour; failed loads retry without trapping the game in a mock ad screen.
+
+References: [Android SDK setup](https://developers.google.com/admob/android/next-gen/quick-start), [rewarded ads](https://developers.google.com/admob/android/next-gen/rewarded/single-load), [UMP integration](https://developers.google.com/admob/android/privacy).
+
+In-app purchases still use the existing mock billing flow and are not production payment processing.
+
+## Shared leaderboard
+
+Default web, Android, and desktop builds read and submit to **https://graviity-zeta.vercel.app/api/leaderboard**. Web uses the relative route on that deployment; native builds use the absolute HTTPS URL. Vite development uses the same server handler. No database keys are required in game binaries.
+
+The existing server-side Dreamlo provider stores global scores. Callsigns identify entries; use the same callsign across devices to share a leaderboard identity. This synchronizes scores, not local stardust/save files. Offline saves remain local; failed submissions are not silently retried.
+
+GET returns an array of { display_name, high_score }; POST accepts those fields and returns { success, scores }. Provider failures report offline instead of invented global scores. The existing anonymous endpoint is not an anti-cheat system.
+
+To use another deployment, set GRAVIPOP_LEADERBOARD_URL before compiling native Rust. Desktop also accepts it at runtime. Set VITE_LEADERBOARD_URL to the same API for web builds. The retained supabase/ migration is a separate backend option; shipped clients consistently use the shared API instead of a browser-only direct-Supabase path.
+
+## Desktop and controls
+
+~~~powershell
+cargo run --release
+~~~
+
+Desktop saves to gravipop_save.json in the working directory. Android saves in its private files directory; web uses gravipop.save.v1 in localStorage.
+
+| Action | Touch / mouse | Keyboard |
+| :--- | :--- | :--- |
+| Aim | Drag across jar / move mouse | Left / Right or A / D |
+| Drop | Release | Space / Down |
+| Gravity Wave | Tap button | 1 |
+| Solar Flare | Tap button | 2 |
+| Pause | Tap pause icon | P / Escape |
+| Web fullscreen | Fullscreen button | F |
+| Web focus mode | Focus button | M |
+| Save finished score | Save Score & Return Home | Enter |
+
+## Validation
+
+~~~powershell
+cargo test --lib
+npm run test:web
+cargo test --lib deployed_global_leaderboard_is_readable_from_native_builds -- --ignored
+~~~
+
+The Rust suite has **28 passing tests** plus one optional production-HTTPS check. It covers physics, landing without scoring, drop unlocks/rarity, request-specific ad rewards, and the native API contract. Web checks cover single save events, ad lifecycle and placement, and leaderboard request ordering/offline handling.
+
+The optional HTTPS check reads the production board without creating a score. Release WASM, Windows desktop, native arm64, and the Gradle debug APK are build-checked. Browser test creatives and the phone layout are visually verified. No Android device is currently attached for on-device ad testing.
+
+Real Google web inventory was also checked manually: an early close returned no reward, a completed rewarded video returned one confirmed reward after closing, and a gaming interstitial opened and closed without a reward through the provider SDK.
+
+## Architecture
+
+~~~text
+src/
+  lib.rs                         Game loop, result screens and merge events
+  core/
+    leaderboard.rs               Shared client / polling
+    leaderboard_native.rs        Native HTTPS background worker
+    save_system.rs               Versioned progress
+    sector.rs                    Campaign objectives
+    web_bridge.rs                Miniquad web FFI
+  physics/
+    celestial_tier.rs            13-tier merge chain
+    drop_pool.rs                 Per-run merge unlocks / weighted drops
+    collision.rs                 Physics and merge-only score events
+  monetization/
+    ads.rs                       Request-specific ad state
+    ad_bridge.rs                 Web FFI / Android JNI
+    billing.rs                   Existing mock purchase flow
+  ui/
+    game_over_modal.rs           Centered results and unified save
+    ad_overlay.rs                Paused backdrop during provider ads
+  graphics/                      Shapes, particles and starfield
+  audio/                         Synthesized sounds
+  web/                           Vite UI, codex and styles
+web/
+  gravipop_web.js                 Storage, name input and leaderboard plugin
+  gravipop_ads.js                 GPT fullscreen/sidebar lifecycle
+public/                          Committed WASM and runtime mirrors
+api/leaderboard.js               Shared server-side handler
+android/app/src/main/
+  java/com/gravipop/celestialmerge/
+    MainActivity.kt              Miniquad host and JNI callbacks
+    AdMobHelper.kt               Next-Gen ads and UMP
+  java/com/gravipop/runtime/      Generated Miniquad activity
+  java/quad_native/              Miniquad JNI declarations
+  jniLibs/arm64-v8a/              Native game library
+scripts/
+  build-wasm.mjs                 WASM and public runtime sync
+  build-android.mjs              NDK library and matching Java host
+  test-*.mjs                     Bridge, ad and API checks
+docs/screenshots/                Real captures
+assets/                          Font and game art
+Cargo.lock                       Reproducible Rust dependency versions
+vercel.json                      Vite deployment and WASM headers
+~~~

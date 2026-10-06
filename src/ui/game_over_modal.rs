@@ -55,6 +55,8 @@ impl GameOverModal {
         stardust_earned: u64,
         revive_available: bool,
         stardust_doubled: bool,
+        rewarded_ready: bool,
+        ad_status: &str,
         public_name: &str,
         leaderboard_status: &str,
         mouse_pos: Vec2,
@@ -258,7 +260,9 @@ impl GameOverModal {
                 by,
                 bw,
                 btn_h,
-                if hov {
+                if !rewarded_ready {
+                    Color::new(0.18, 0.18, 0.24, 0.55)
+                } else if hov {
                     Color::new(0.30, 0.78, 0.46, 1.0)
                 } else {
                     Color::new(0.20, 0.62, 0.36, 1.0)
@@ -266,14 +270,14 @@ impl GameOverModal {
             );
             draw_rectangle_lines(bx, by, bw, btn_h, 1.8, WHITE);
             dcx(
-                "WATCH AD: REWIND & REVIVE",
+                if rewarded_ready { "WATCH AD: REWIND & REVIVE" } else { "AD NOT READY: REVIVE" },
                 cx,
                 by + 40.0,
                 22.0,
                 WHITE,
                 font,
             );
-            if hov && mouse_clicked {
+            if rewarded_ready && hov && mouse_clicked {
                 action = GameOverAction::WatchAdRevive;
             }
         } else {
@@ -297,15 +301,17 @@ impl GameOverModal {
                 by,
                 bw,
                 btn_h,
-                if hov {
+                if !rewarded_ready {
+                    Color::new(0.18, 0.18, 0.24, 0.55)
+                } else if hov {
                     Color::new(0.88, 0.58, 0.18, 1.0)
                 } else {
                     Color::new(0.72, 0.46, 0.10, 1.0)
                 },
             );
             draw_rectangle_lines(bx, by, bw, btn_h, 1.8, WHITE);
-            dcx("WATCH AD: 2X STARDUST", cx, by + 40.0, 22.0, WHITE, font);
-            if hov && mouse_clicked {
+            dcx(if rewarded_ready { "WATCH AD: 2X STARDUST" } else { "AD NOT READY: 2X STARDUST" }, cx, by + 40.0, 22.0, WHITE, font);
+            if rewarded_ready && hov && mouse_clicked {
                 action = GameOverAction::WatchAdDoubleStardust;
             }
         } else {
@@ -360,6 +366,9 @@ impl GameOverModal {
             action = GameOverAction::OpenShop;
         }
 
+        if !ad_status.is_empty() {
+            dcx(ad_status, cx, cy + ch - 16.0, 16.0, Color::new(1.0, 0.76, 0.42, 1.0), font);
+        }
         action
     }
 }

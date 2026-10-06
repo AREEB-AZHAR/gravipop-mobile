@@ -186,15 +186,17 @@
                     input.style.display = "none";
                     return -1;
                 }
-                const width = window.innerWidth;
-                const height = window.innerHeight;
+                const canvasEl = document.getElementById("glcanvas");
+                const rect = canvasEl ? canvasEl.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+                const width = rect.width;
+                const height = rect.height;
                 const scale = Math.min(width / 720, height / 1280);
                 const ox = (width - 720 * scale) * 0.5;
                 const oy = (height - 1280 * scale) * 0.5;
 
                 input.style.display = "block";
-                input.style.left = `${ox + x * scale}px`;
-                input.style.top = `${oy + y * scale}px`;
+                input.style.left = `${rect.left + ox + x * scale}px`;
+                input.style.top = `${rect.top + oy + y * scale}px`;
                 input.style.width = `${w * scale}px`;
                 input.style.height = `${h * scale}px`;
                 input.style.fontSize = `${Math.max(12, 19 * scale)}px`;

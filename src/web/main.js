@@ -17,28 +17,67 @@ if (codexContainer) {
   ).join("");
 }
 
-// Fullscreen Toggle
-const fullscreenBtn = document.getElementById("btn-fullscreen");
-if (fullscreenBtn) {
-  fullscreenBtn.addEventListener("click", () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
+// Ensure Canvas is focused on click
+const canvas = document.getElementById("glcanvas");
+if (canvas) {
+  canvas.addEventListener("pointerdown", () => {
+    canvas.focus();
   });
 }
 
-// Global hotkey 'F' for fullscreen
+// Fullscreen API helper
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+const fullscreenBtn = document.getElementById("btn-fullscreen");
+if (fullscreenBtn) {
+  fullscreenBtn.addEventListener("click", toggleFullscreen);
+}
+
+const mobileFullscreenBtn = document.getElementById("btn-mobile-fullscreen");
+if (mobileFullscreenBtn) {
+  mobileFullscreenBtn.addEventListener("click", toggleFullscreen);
+}
+
+// Focus / Maximize Game Mode (collapses side panels to maximize canvas)
+const leftPanel = document.getElementById("left-panel");
+const rightPanel = document.getElementById("right-panel");
+const focusBtn = document.getElementById("btn-focus");
+
+function toggleFocusMode() {
+  const isCollapsed = leftPanel?.classList.contains("collapsed");
+  if (isCollapsed) {
+    leftPanel?.classList.remove("collapsed");
+    rightPanel?.classList.remove("collapsed");
+    if (focusBtn) focusBtn.textContent = "↔";
+  } else {
+    leftPanel?.classList.add("collapsed");
+    rightPanel?.classList.add("collapsed");
+    if (focusBtn) focusBtn.textContent = "🗗";
+  }
+  // Notify Macroquad to resize canvas to the new width
+  setTimeout(() => {
+    window.dispatchEvent(new Event("resize"));
+  }, 100);
+}
+
+if (focusBtn) {
+  focusBtn.addEventListener("click", toggleFocusMode);
+}
+
+// Global Hotkeys: 'F' = Fullscreen, 'M' = Maximize / Focus
 window.addEventListener("keydown", (e) => {
+  if (document.activeElement?.tagName === "INPUT") return;
+
   if (e.key === "f" || e.key === "F") {
-    if (document.activeElement?.tagName !== "INPUT") {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else {
-        document.exitFullscreen().catch(() => {});
-      }
-    }
+    toggleFullscreen();
+  } else if (e.key === "m" || e.key === "M") {
+    toggleFocusMode();
   }
 });
 
@@ -62,34 +101,37 @@ function updateLiveStats() {
 setInterval(updateLiveStats, 1000);
 updateLiveStats();
 
-// Mobile Drawer Toggles
+// Mobile Drawer Controls
 const mobileCodexBtn = document.getElementById("btn-mobile-codex");
 const mobileControlsBtn = document.getElementById("btn-mobile-controls");
-const leftPanel = document.getElementById("left-panel");
-const rightPanel = document.getElementById("right-panel");
+const closeLeftBtn = document.getElementById("btn-close-left");
+const closeRightBtn = document.getElementById("btn-close-right");
+const drawerBackdrop = document.getElementById("drawer-backdrop");
 
-if (mobileCodexBtn && leftPanel) {
+function closeDrawers() {
+  leftPanel?.classList.remove("open");
+  rightPanel?.classList.remove("open");
+  drawerBackdrop?.classList.remove("active");
+}
+
+if (mobileCodexBtn) {
   mobileCodexBtn.addEventListener("click", () => {
-    const isVisible = leftPanel.style.display === "flex";
-    leftPanel.style.display = isVisible ? "none" : "flex";
-    leftPanel.style.position = "absolute";
-    leftPanel.style.left = "0";
-    leftPanel.style.top = "56px";
-    leftPanel.style.zIndex = "40";
-    if (!isVisible && rightPanel) rightPanel.style.display = "none";
+    rightPanel?.classList.remove("open");
+    leftPanel?.classList.add("open");
+    drawerBackdrop?.classList.add("active");
   });
 }
 
-if (mobileControlsBtn && rightPanel) {
+if (mobileControlsBtn) {
   mobileControlsBtn.addEventListener("click", () => {
-    const isVisible = rightPanel.style.display === "flex";
-    rightPanel.style.display = isVisible ? "none" : "flex";
-    rightPanel.style.position = "absolute";
-    rightPanel.style.right = "0";
-    rightPanel.style.top = "56px";
-    rightPanel.style.zIndex = "40";
-    if (!isVisible && leftPanel) leftPanel.style.display = "none";
+    leftPanel?.classList.remove("open");
+    rightPanel?.classList.add("open");
+    drawerBackdrop?.classList.add("active");
   });
 }
 
-console.log("🌌 GraviPop Web Shell Initialized");
+if (closeLeftBtn) closeLeftBtn.addEventListener("click", closeDrawers);
+if (closeRightBtn) closeRightBtn.addEventListener("click", closeDrawers);
+if (drawerBackdrop) drawerBackdrop.addEventListener("click", closeDrawers);
+
+console.log("🌌 GraviPop Web Shell Ready: Canvas 100% Scaled & Mobile Optimized");

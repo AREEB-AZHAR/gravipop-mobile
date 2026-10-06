@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#070814">
   <meta name="description" content="GraviPop: Stellar Conservatory — High-performance cosmic merge puzzle game in pure Rust & WebAssembly.">
   <title>GraviPop: Stellar Conservatory</title>
@@ -30,6 +30,9 @@
           <span class="icon">🏆</span>
           <span>Best: <strong id="stat-high-score">0</strong></span>
         </div>
+        <button id="btn-focus" class="btn-icon btn-theatre" title="Toggle Full Width / Focus Mode (M)" aria-label="Maximize Game View">
+          ↔
+        </button>
         <button id="btn-fullscreen" class="btn-icon" title="Toggle Fullscreen (F)" aria-label="Toggle Fullscreen">
           ⛶
         </button>
@@ -42,7 +45,7 @@
       <aside id="left-panel" class="side-panel">
         <div class="panel-header">
           <span class="panel-title">⭐ Celestial Codex</span>
-          <span class="brand-badge">10 Tiers</span>
+          <button id="btn-close-left" class="close-panel-btn" title="Close Codex">✕</button>
         </div>
         <div id="codex-list" class="codex-list">
           <!-- Populated by main.js -->
@@ -60,6 +63,7 @@
         <nav id="mobile-floating-bar" aria-label="Mobile Navigation">
           <button id="btn-mobile-codex" class="btn-icon" title="Celestial Codex" aria-label="Celestial Codex">📖</button>
           <button id="btn-mobile-controls" class="btn-icon" title="Controls" aria-label="Controls">🎮</button>
+          <button id="btn-mobile-fullscreen" class="btn-icon" title="Fullscreen" aria-label="Fullscreen">⛶</button>
         </nav>
       </section>
 
@@ -67,7 +71,7 @@
       <aside id="right-panel" class="side-panel">
         <div class="panel-header">
           <span class="panel-title">🎮 Mission Control</span>
-          <span class="brand-badge">Controls</span>
+          <button id="btn-close-right" class="close-panel-btn" title="Close Controls">✕</button>
         </div>
 
         <div class="control-card">
@@ -96,6 +100,10 @@
             <span>Toggle Fullscreen</span>
             <span class="kbd-badge">F</span>
           </div>
+          <div class="control-row">
+            <span>Focus Mode</span>
+            <span class="kbd-badge">M</span>
+          </div>
         </div>
 
         <div class="control-card">
@@ -119,6 +127,9 @@
         </div>
       </aside>
     </main>
+
+    <!-- Mobile Drawer Backdrop -->
+    <div id="drawer-backdrop"></div>
   </div>
 
   <!-- Runtime Scripts -->

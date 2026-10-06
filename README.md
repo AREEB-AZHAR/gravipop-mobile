@@ -7,13 +7,19 @@
 
 ## 📸 Screenshots & Live Interface
 
-| Modern Vite Web Application Shell | Active Cosmic Merge Gameplay |
-| :---: | :---: |
-| ![GraviPop Vite Web App](docs/screenshots/web_app.png) | ![GraviPop Active Gameplay](docs/screenshots/gameplay.png) |
+| Desktop Full-Height Interface | Mobile Screen (Portrait 9:16) | Mobile Slide-Over Codex | Desktop Focus Mode |
+| :---: | :---: | :---: | :---: |
+| ![Desktop Interface](docs/screenshots/desktop_enlarged.png) | ![Mobile Screen](docs/screenshots/mobile_view.png) | ![Mobile Drawer](docs/screenshots/mobile_codex_drawer.png) | ![Desktop Focus Mode](docs/screenshots/desktop_focus_mode.png) |
 
 ---
 
 ## 🚀 Recent Accomplishments & System Upgrades
+
+- **Full Viewport Canvas Scaling & Mobile Ergonomics (100% Tailored for Mobile & Desktop)**:
+  - **Full Screen Height Canvas**: Resolved the canvas shrinking issue by enforcing `width: 100% !important; height: 100% !important;` on `#glcanvas` and `#canvas-wrapper`. Macroquad's WebGL context now calculates the true available viewport dimensions dynamically, expanding the game to fill the maximum height and width available.
+  - **Native Mobile Smartphone Ratio (9:16 / 720 × 1280)**: GraviPop is architected around a vertical 9:16 aspect ratio, making it perfectly fitted for modern smartphones (iPhone, Samsung Galaxy, Pixel). On mobile viewports, the game fills 100% of the screen with zero wasted space and zero clipping.
+  - **Adaptive Slide-Over Drawers**: For screen widths under 1080px, the heavy desktop side wings transform into sleek, slide-in glassmorphic drawers. Players can open the **Celestial Codex** or **Mission Control** via the floating mobile navigation bar at the bottom and dismiss them with a single tap outside.
+  - **Desktop Focus / Theater Mode (`M` / `↔`)**: Wide-screen desktop users can toggle Focus Mode at any time (via button or `M` key) to collapse both side wings and give 100% of the display to the cosmic merge arena.
 
 - **Modern Vite Web Application Shell (Resolved & Configured)**:
   - **Instant Sub-Second HMR & Dev Server**: Replaced the static server setup with a first-class **Vite** web application. Developers and players can run `npm run dev` for instant 300ms startup at `http://localhost:3000`.

@@ -316,6 +316,39 @@ impl BodyRenderer {
                 draw_circle(pos.x - jx, pos.y - jy, if is_preview { 2.5 } else { 4.0 }, Color::new(1.0, 0.80, 1.0, 0.95));
             }
 
+            CelestialTier::Nebula => {
+                // Rosette cloud lobes orbit a bright stellar nursery.
+                for i in 0..7 {
+                    let a = i as f32 * std::f32::consts::TAU / 7.0 + rotation;
+                    draw_circle(pos.x + a.cos() * r * 0.48, pos.y + a.sin() * r * 0.48,
+                        r * 0.36, Color::new(0.95, 0.45, 0.85, 0.45));
+                    draw_circle(pos.x + a.cos() * r * 0.70, pos.y + a.sin() * r * 0.70,
+                        r * 0.035, WHITE);
+                }
+                draw_circle(pos.x, pos.y, r * 0.22, Color::new(1.0, 0.85, 0.95, 0.95));
+            }
+            CelestialTier::Quasar => {
+                // A rotating diamond surrounds a luminous turquoise core.
+                for i in 0..4 {
+                    let a = i as f32 * std::f32::consts::FRAC_PI_2 + rotation;
+                    let b = a + std::f32::consts::FRAC_PI_2;
+                    draw_line(pos.x + a.cos() * r * 0.85, pos.y + a.sin() * r * 0.85,
+                        pos.x + b.cos() * r * 0.85, pos.y + b.sin() * r * 0.85,
+                        if is_preview { 1.5 } else { 3.0 }, WHITE);
+                }
+                draw_circle_lines(pos.x, pos.y, r * 0.55, 2.0, WHITE);
+                draw_circle(pos.x, pos.y, r * 0.30, Color::new(0.9, 1.0, 1.0, 1.0));
+            }
+            CelestialTier::CosmicCore => {
+                // Golden hexagonal shell with a central six-point star.
+                draw_poly_lines(pos.x, pos.y, 6, r * 0.85, rotation.to_degrees(), 3.0, WHITE);
+                for i in 0..6 {
+                    let a = i as f32 * std::f32::consts::TAU / 6.0 + rotation;
+                    draw_line(pos.x, pos.y, pos.x + a.cos() * r * 0.65,
+                        pos.y + a.sin() * r * 0.65, 3.0, Color::new(1.0, 0.95, 0.65, 0.9));
+                }
+                draw_circle(pos.x, pos.y, r * 0.25, WHITE);
+            }
             CelestialTier::Singularity => {
                 // Pitch-Black Event Horizon + Relativistic Accretion Disk + Gravitational Lensing
                 // Swirling Accretion Disk (Iridescent Purple & Golden matter)

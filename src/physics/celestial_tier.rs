@@ -1,7 +1,7 @@
 use macroquad::color::Color;
 use quad_rand::gen_range;
 
-/// Ten cosmic tiers, sized so even the biggest fits comfortably in the 520 px jar.
+/// Cosmic tiers sized to fit in the 520 px jar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CelestialTier {
     Asteroid = 0,
@@ -13,11 +13,14 @@ pub enum CelestialTier {
     RedDwarf = 6,
     BlueSupergiant = 7,
     Pulsar = 8,
-    Singularity = 9, // largest, rarest, most satisfying to create
+    Singularity = 9,
+    Nebula = 10,
+    Quasar = 11,
+    CosmicCore = 12,
 }
 
 impl CelestialTier {
-    pub const ALL: [CelestialTier; 10] = [
+    pub const ALL: [CelestialTier; 13] = [
         CelestialTier::Asteroid,
         CelestialTier::Moon,
         CelestialTier::Terrestrial,
@@ -28,6 +31,9 @@ impl CelestialTier {
         CelestialTier::BlueSupergiant,
         CelestialTier::Pulsar,
         CelestialTier::Singularity,
+        CelestialTier::Nebula,
+        CelestialTier::Quasar,
+        CelestialTier::CosmicCore,
     ];
 
     pub fn next_tier(&self) -> Option<CelestialTier> {
@@ -51,6 +57,9 @@ impl CelestialTier {
             Self::BlueSupergiant => "Supergiant",
             Self::Pulsar => "Pulsar",
             Self::Singularity => "SINGULARITY",
+            Self::Nebula => "Nebula",
+            Self::Quasar => "Quasar",
+            Self::CosmicCore => "Cosmic Core",
         }
     }
 
@@ -67,6 +76,9 @@ impl CelestialTier {
             Self::BlueSupergiant => 98.0,
             Self::Pulsar => 116.0,
             Self::Singularity => 136.0,
+            Self::Nebula => 150.0,
+            Self::Quasar => 166.0,
+            Self::CosmicCore => 182.0,
         }
     }
 
@@ -89,6 +101,9 @@ impl CelestialTier {
             Self::BlueSupergiant => 4_000,
             Self::Pulsar => 10_000,
             Self::Singularity => 30_000, // winning moment!
+            Self::Nebula => 60_000,
+            Self::Quasar => 120_000,
+            Self::CosmicCore => 250_000,
         }
     }
 
@@ -104,6 +119,9 @@ impl CelestialTier {
             Self::BlueSupergiant => Color::new(0.28, 0.88, 1.00, 1.0), // bright cyan
             Self::Pulsar => Color::new(0.88, 0.38, 1.00, 1.0),   // vivid purple
             Self::Singularity => Color::new(0.08, 0.06, 0.16, 1.0), // near-black w/ glow
+            Self::Nebula => Color::new(0.72, 0.25, 0.65, 1.0),
+            Self::Quasar => Color::new(0.20, 0.85, 0.85, 1.0),
+            Self::CosmicCore => Color::new(1.0, 0.70, 0.20, 1.0),
         }
     }
 
@@ -120,16 +138,30 @@ impl CelestialTier {
         }
     }
 
-    /// Only the first 3 tiers can spawn at the top. Weighted towards tier-1.
-    pub fn random_spawn_tier() -> Self {
-        let roll = gen_range(0, 100);
-        if roll < 60 {
-            Self::Asteroid
-        } else if roll < 90 {
-            Self::Moon
-        } else {
-            Self::Terrestrial
+    /// Bigger drops unlock by run score. Each starts at a tiny weight and
+    /// ramps over the next three unlock thresholds, keeping small drops common.
+    fn spawn_weights(score: u64) -> [f32; 13] {
+        let mut weights = [0.0; 13];
+        weights[..3].copy_from_slice(&[60.0, 30.0, 10.0]);
+        let thresholds = [250, 750, 1_500, 3_000, 6_000, 12_000, 24_000, 48_000, 96_000, 192_000];
+        for (offset, threshold) in thresholds.iter().enumerate() {
+            if score >= *threshold {
+                let progress = ((score - threshold) as f32 / (*threshold as f32 * 3.0)).min(1.0);
+                let max_weight = 8.0 / (1.0 + offset as f32 * 0.5);
+                weights[offset + 3] = 0.2 + progress * (max_weight - 0.2);
+            }
         }
+        weights
+    }
+
+    pub fn random_spawn_tier(score: u64) -> Self {
+        let weights = Self::spawn_weights(score);
+        let mut roll = gen_range(0.0, weights.iter().sum::<f32>());
+        for (tier, weight) in Self::ALL.iter().zip(weights) {
+            if roll < weight { return *tier; }
+            roll -= weight;
+        }
+        Self::Asteroid
     }
 }
 
@@ -143,7 +175,8 @@ mod tests {
             CelestialTier::Asteroid.next_tier(),
             Some(CelestialTier::Moon)
         );
-        assert_eq!(CelestialTier::Singularity.next_tier(), None);
+        assert_eq!(CelestialTier::Singularity.next_tier(), Some(CelestialTier::Nebula));
+        assert_eq!(CelestialTier::CosmicCore.next_tier(), None);
     }
 
     #[test]
@@ -165,6 +198,24 @@ mod tests {
     fn test_singularity_fits_jar() {
         // Singularity diameter must be less than the jar width
         use crate::core::config::JAR_WIDTH;
-        assert!(CelestialTier::Singularity.radius() * 2.0 < JAR_WIDTH);
+        for tier in CelestialTier::ALL {
+            assert!(tier.radius() * 2.0 < JAR_WIDTH);
+        }
+    }
+
+    #[test]
+    fn larger_drops_unlock_and_ramp_gradually() {
+        assert_eq!(CelestialTier::spawn_weights(0)[..3], [60.0, 30.0, 10.0]);
+        for (index, threshold) in [250, 750, 1_500, 3_000, 6_000, 12_000, 24_000, 48_000, 96_000, 192_000].iter().enumerate() {
+            let tier = index + 3;
+            assert_eq!(CelestialTier::spawn_weights(threshold - 1)[tier], 0.0);
+            let initial = CelestialTier::spawn_weights(*threshold)[tier];
+            let middle = CelestialTier::spawn_weights(threshold * 2)[tier];
+            let mature = CelestialTier::spawn_weights(threshold * 4)[tier];
+            assert!(initial > 0.0 && initial < middle && middle < mature);
+            assert_eq!(mature, CelestialTier::spawn_weights(u64::MAX)[tier]);
+        }
+        let weights = CelestialTier::spawn_weights(u64::MAX);
+        assert!(weights[3..].iter().sum::<f32>() / weights.iter().sum::<f32>() < 0.3);
     }
 }

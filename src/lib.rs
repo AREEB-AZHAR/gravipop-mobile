@@ -259,7 +259,7 @@ pub async fn game_main() {
     let mut danger_timer = 0.0f32;
 
     // One random planet at a time — no preview choice or reserve system.
-    let mut next_tier = CelestialTier::random_spawn_tier();
+    let mut next_tier = CelestialTier::random_spawn_tier(current_score);
     let mut drop_x = VIRTUAL_WIDTH * 0.5;
     let mut is_aiming = false;
     let mut drop_cooldown = 0.0f32;
@@ -365,7 +365,7 @@ pub async fn game_main() {
                     danger_timer = 0.0;
                     ability_charges = 0;
                     drop_cooldown = 0.0;
-                    next_tier = CelestialTier::random_spawn_tier();
+                    next_tier = CelestialTier::random_spawn_tier(current_score);
                     is_aiming = false;
                     game_state = GameState::Playing;
                 }
@@ -468,7 +468,7 @@ pub async fn game_main() {
                         danger_timer = 0.0;
                         ability_charges = 0;
                         drop_cooldown = 0.0;
-                        next_tier = CelestialTier::random_spawn_tier();
+                        next_tier = CelestialTier::random_spawn_tier(current_score);
                         is_aiming = false;
                         game_state = GameState::Playing;
                         break;
@@ -558,6 +558,7 @@ pub async fn game_main() {
 
                 if commit_drop && drop_cooldown <= 0.0 {
                     let tier = next_tier;
+                    drop_x = drop_x.clamp(JAR_LEFT + tier.radius(), JAR_RIGHT - tier.radius());
                     let body = CelestialBody::new(
                         next_body_id,
                         tier,
@@ -570,7 +571,7 @@ pub async fn game_main() {
                     particles.spawn_trail(Vec2::new(drop_x, DROP_Y), tier.primary_color());
 
                     // Roll exactly one new random planet after each drop.
-                    next_tier = CelestialTier::random_spawn_tier();
+                    next_tier = CelestialTier::random_spawn_tier(current_score);
                     drop_cooldown = DROP_COOLDOWN;
                     is_aiming = false;
                 }
@@ -683,7 +684,7 @@ pub async fn game_main() {
                     danger_timer = 0.0;
                     ability_charges = 0;
                     drop_cooldown = 0.0;
-                    next_tier = CelestialTier::random_spawn_tier();
+                    next_tier = CelestialTier::random_spawn_tier(current_score);
                     is_aiming = false;
                     game_state = GameState::Playing;
                 }
@@ -769,6 +770,7 @@ pub async fn game_main() {
         let mut shop_action = ShopAction::None;
         let mut ad_result = MockAdResult::None;
         let mut sector_submit = false;
+        let web_submit = crate::core::web_bridge::take_submit_request();
 
         match game_state {
             // ── Main Menu ────────────────────────────────────────────────────
@@ -1493,6 +1495,9 @@ pub async fn game_main() {
                     tap,
                     f,
                 );
+                if web_submit {
+                    go_action = GameOverAction::SubmitLeaderboard;
+                }
             }
 
             // ── Shop ─────────────────────────────────────────────────────────
@@ -1550,7 +1555,7 @@ pub async fn game_main() {
                 danger_timer = 0.0;
                 ability_charges = 0;
                 drop_cooldown = 0.0;
-                next_tier = CelestialTier::random_spawn_tier();
+                next_tier = CelestialTier::random_spawn_tier(current_score);
                 is_aiming = false;
                 game_state = GameState::Playing;
             }
@@ -1574,12 +1579,13 @@ pub async fn game_main() {
                     let _ = save_mgr.save(&save_data);
                     leaderboard.submit(&name, current_score).await;
                     leaderboard_status = leaderboard.status.clone();
+                    game_state = GameState::MainMenu;
                 }
             }
             GameOverAction::None => {}
         }
 
-        if sector_submit {
+        if sector_submit || (web_submit && game_state == GameState::SectorComplete) {
             let name = save_data.public_name.trim();
             if name.chars().count() < 3 {
                 leaderboard_status = "Enter at least 3 characters.".to_string();
@@ -1588,6 +1594,7 @@ pub async fn game_main() {
                 let _ = save_mgr.save(&save_data);
                 leaderboard.submit(&name, current_score).await;
                 leaderboard_status = leaderboard.status.clone();
+                game_state = GameState::MainMenu;
             }
         }
 

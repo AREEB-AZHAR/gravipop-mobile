@@ -201,7 +201,7 @@
         }
     }
 
-    let latestGameScore = 0;
+    let submitRequested = false;
 
     const plugin = {
         name: "gravipop_web",
@@ -249,14 +249,12 @@
                 const submitBtn = document.getElementById("leaderboard-submit-btn");
                 if (!input) return -1;
 
-                latestGameScore = Number((BigInt(scoreHigh >>> 0) << 32n) | BigInt(scoreLow >>> 0));
-
                 if (!input.dataset.bound) {
                     input.dataset.bound = "1";
                     input.addEventListener("keydown", (e) => {
                         if (e.key === "Enter") {
                             e.preventDefault();
-                            doLeaderboardSubmit(input.value, latestGameScore);
+                            submitRequested = true;
                         }
                     });
                 }
@@ -264,12 +262,13 @@
                     submitBtn.dataset.bound = "1";
                     submitBtn.addEventListener("click", (e) => {
                         e.preventDefault();
-                        doLeaderboardSubmit(input.value, latestGameScore);
+                        submitRequested = true;
                     });
                 }
 
                 const targetEl = container || input;
                 if (!show) {
+                    submitRequested = false;
                     targetEl.style.display = "none";
                     return -1;
                 }
@@ -297,6 +296,11 @@
             };
 
             // ── Leaderboard FFI ──
+            importObject.env.gravipop_take_submit_request = function () {
+                const requested = submitRequested;
+                submitRequested = false;
+                return requested ? 1 : 0;
+            };
             importObject.env.gravipop_leaderboard_configured = function () {
                 return 1;
             };

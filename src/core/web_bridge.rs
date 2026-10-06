@@ -24,12 +24,20 @@ extern "C" {
     ) -> i32;
 
     fn gravipop_leaderboard_refresh();
+    fn gravipop_take_submit_request() -> i32;
     fn gravipop_leaderboard_submit(name_ptr: *const u8, name_len: u32, score_high: u32, score_low: u32);
     fn gravipop_leaderboard_status_len() -> i32;
     fn gravipop_leaderboard_status_get(out_ptr: *mut u8, max_len: u32) -> i32;
     fn gravipop_leaderboard_data_len() -> i32;
     fn gravipop_leaderboard_data_get(out_ptr: *mut u8, max_len: u32) -> i32;
     fn gravipop_leaderboard_configured() -> i32;
+}
+
+pub fn take_submit_request() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    { unsafe { gravipop_take_submit_request() != 0 } }
+    #[cfg(not(target_arch = "wasm32"))]
+    { false }
 }
 
 pub fn storage_get(key: &str) -> Option<String> {

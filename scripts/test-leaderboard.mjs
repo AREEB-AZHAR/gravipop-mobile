@@ -82,6 +82,14 @@ const response = (data, ok = true) => ({ ok, json: async () => data });
   assert.equal(web.data()[0].display_name, "New Pilot");
 }
 
+// Verify DELETE method validation
+{
+  const res = { headers: {}, setHeader(key, value) { this.headers[key] = value; }, end(body) { this.body = body; } };
+  await handler({ method: "DELETE", url: "/api/leaderboard" }, res);
+  assert.equal(res.statusCode, 400);
+  assert.ok(JSON.parse(res.body).error);
+}
+
 // Verify that a provider outage is explicitly offline for every build.
 const originalFetch = globalThis.fetch;
 const originalError = console.error;
@@ -95,4 +103,4 @@ try {
   assert.ok(JSON.parse(res.body).error);
 } finally { globalThis.fetch = originalFetch; console.error = originalError; }
 
-console.log("Shared leaderboard checks passed: web/native API contract, single submission, stale-response ordering, empty boards, and explicit offline state.");
+console.log("Shared leaderboard checks passed: web/native API contract, single submission, stale-response ordering, empty boards, DELETE endpoint, and explicit offline state.");

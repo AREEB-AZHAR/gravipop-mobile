@@ -14,6 +14,9 @@
     "build:wasm": "node scripts/build-wasm.mjs",
     "build:android": "node scripts/build-android.mjs",
     "test:web": "node scripts/test-submit.mjs && node scripts/test-ads.mjs && node scripts/test-leaderboard.mjs",
+    "leaderboard:list": "node scripts/manage-leaderboard.mjs list",
+    "leaderboard:delete": "node scripts/manage-leaderboard.mjs delete",
+    "leaderboard:clear": "node scripts/manage-leaderboard.mjs clear",
     "build:all": "npm run build:wasm && npm run build",
     "start": "node server.mjs"
   },

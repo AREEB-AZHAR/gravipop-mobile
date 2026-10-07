@@ -5,7 +5,10 @@ A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, a
 **[Play GraviPop](https://graviity-zeta.vercel.app/)** · [Game source](src/lib.rs) · [Android app](android/app) · [Shared leaderboard API](api/leaderboard.js)
 
 ## Recent updates
-
+- **Global Leaderboard Score Deletion & Duplicate Username Handling.**
+  - **Try-Catch Existing Username Protection:** When submitting a score (`submitGlobalScore`), a `try...catch` block inspects current global entries. If a matching username (case-insensitive) already exists, it compares scores: lower scores will not downgrade the player's recorded personal best, while higher scores overwrite the existing entry and clean up stale duplicates in Dreamlo.
+  - **Case-Insensitive Deduplication:** `fetchGlobalLeaderboard` filters and groups all entries by canonical username, guaranteeing each player holds exactly one leaderboard slot with their highest achieved score.
+  - **Score Deletion Endpoints & CLI Management:** Added a `DELETE /api/leaderboard?name=<username>` and `DELETE /api/leaderboard?clear=all` API route, plus terminal commands (`npm run leaderboard:list`, `npm run leaderboard:delete -- <name>`, `npm run leaderboard:clear`) via `scripts/manage-leaderboard.mjs` to easily manage or prune scores.
 - **Mobile Screen Transition Touch Release Guard & Cross-Screen Click Bleed Elimination.** Fixed the mobile-specific touchscreen bug where tapping a button on one screen immediately clicked whatever button was underneath on the destination screen:
   - **Touch Contact Only (`tap = mouse_pressed || touch_started`):** Removed `touch_ended` from `tap` generation. On touchscreens, lifting a finger emits a release event (`TouchPhase::Ended`), which previously synthesized a second tap if the finger remained held down past the debounce cooldown.
   - **Immediate Same-Frame Tap Consumption:** Consumed `ui_tap = false` the instant any button or modal action fires during game logic, completely preventing the subsequent render pass from evaluating the tap against newly displayed modal buttons (e.g. Pause "End Run" directly overlapping GameOver "Play Again" in the same 0ms frame).

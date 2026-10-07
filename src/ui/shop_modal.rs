@@ -65,17 +65,17 @@ impl ShopModal {
         draw_vector_gem(dust_card_x + 24.0, dust_card_y + 18.0, 16.0, Color::new(0.35, 0.85, 1.0, 1.0));
         dtx(&format!("STARDUST: {}", stardust), dust_card_x + 42.0, dust_card_y + 25.0, 18.0, Color::new(0.85, 0.95, 1.0, 1.0), font);
 
-        // Close button
+        // Close button (expanded hit box for mobile thumbs)
         let close_x = card_x + cw - 52.0;
         let close_y = card_y + 14.0;
-        let close_hov = inside(mouse_pos, close_x, close_y, 38.0, 38.0);
+        let close_hov = inside(mouse_pos, close_x - 8.0, close_y - 8.0, 54.0, 54.0);
         draw_rectangle(
             close_x, close_y, 38.0, 38.0,
             if close_hov { Color::new(0.82, 0.22, 0.22, 0.90) } else { Color::new(0.25, 0.12, 0.16, 0.70) },
         );
         draw_rectangle_lines(close_x, close_y, 38.0, 38.0, 1.5, WHITE);
         draw_vector_close(close_x + 19.0, close_y + 19.0, 16.0, 2.0, WHITE);
-        if close_hov && mouse_clicked { action = ShopAction::Close; }
+        if (close_hov && mouse_clicked) || is_key_pressed(KeyCode::Escape) { action = ShopAction::Close; }
 
         // Status message
         if let Some(msg) = status_message {

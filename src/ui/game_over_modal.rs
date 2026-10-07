@@ -234,8 +234,13 @@ impl GameOverModal {
             },
         );
         draw_rectangle_lines(submit_x, submit_y, cw - 36.0, 52.0, 1.5, WHITE);
+        let submit_label = if public_name.trim().is_empty() {
+            "SKIP & RETURN HOME"
+        } else {
+            "SAVE SCORE & RETURN HOME"
+        };
         dcx(
-            "SAVE SCORE & RETURN HOME",
+            submit_label,
             cx,
             submit_y + 34.0,
             20.0,

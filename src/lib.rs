@@ -285,6 +285,8 @@ pub async fn game_main() {
     let mut is_aiming = false;
     let mut drop_cooldown = 0.0f32;
     let mut button_lock_timer = 0.0f32;
+    let mut require_touch_release = false;
+    let mut shop_return_state = GameState::MainMenu;
 
     // Strategic abilities
     let mut ability_charges: u32 = 0;
@@ -339,7 +341,7 @@ pub async fn game_main() {
 
         let ptr = current_ptr;
 
-        let tap = mouse_pressed || touch_started || touch_ended;
+        let tap = mouse_pressed || touch_started;
         let is_held = mouse_down || touch_down;
         let just_released = mouse_released || touch_ended;
 
@@ -347,8 +349,20 @@ pub async fn game_main() {
         if button_lock_timer > 0.0 {
             button_lock_timer = (button_lock_timer - dt).max(0.0);
         }
-        let can_click_ui = button_lock_timer <= 0.0;
-        let ui_tap = tap && can_click_ui;
+
+        // Mobile touch release guard:
+        // After any button press or screen transition, the finger must be completely lifted
+        // before any new UI button can be tapped or gameplay dropped/aimed.
+        if require_touch_release {
+            if is_held {
+                button_lock_timer = button_lock_timer.max(BUTTON_LOCK_DELAY);
+            } else {
+                require_touch_release = false;
+            }
+        }
+
+        let can_click_ui = button_lock_timer <= 0.0 && !require_touch_release;
+        let mut ui_tap = tap && can_click_ui;
 
         // ── Global Ticks ─────────────────────────────────────────────────────
         starfield.update(dt);
@@ -398,6 +412,7 @@ pub async fn game_main() {
                     && ui_tap
                     && hit(ptr, VIRTUAL_WIDTH - 210.0, 20.0, 190.0, 44.0)
                 {
+                    ui_tap = false;
                     button_lock_timer = BUTTON_LOCK_DELAY;
                     ad_bridge::show_privacy_options();
                 }
@@ -412,7 +427,10 @@ pub async fn game_main() {
                     || is_key_pressed(KeyCode::Space)
                     || is_key_pressed(KeyCode::Enter)
                 {
+                    ui_tap = false;
+                    require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
+                    shop_return_state = GameState::MainMenu;
                     ad_status.clear();
                     bodies.clear();
                     next_body_id = 1;
@@ -429,10 +447,15 @@ pub async fn game_main() {
                     game_state = GameState::Playing;
                 }
                 if ui_tap && hit(ptr, bx, shop_y, bw, 66.0) {
+                    ui_tap = false;
+                    require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
+                    shop_return_state = GameState::MainMenu;
                     game_state = GameState::Shop;
                 }
                 if ui_tap && hit(ptr, bx, lb_y, bw, 62.0) {
+                    ui_tap = false;
+                    require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
                     leaderboard.refresh().await;
                     leaderboard_status = leaderboard.status.clone();
@@ -442,7 +465,8 @@ pub async fn game_main() {
 
             GameState::GameOver => {
                 // Name field is deliberately available after every run.
-                if tap && hit(ptr, 50.0, 531.0, 620.0, 48.0) {
+                if ui_tap && hit(ptr, 50.0, 531.0, 620.0, 48.0) {
+                    ui_tap = false;
                     name_focused = true;
                     #[cfg(target_os = "android")]
                     macroquad::miniquad::window::show_keyboard(true);
@@ -463,10 +487,13 @@ pub async fn game_main() {
 
             GameState::Leaderboard => {
                 if (ui_tap && hit(ptr, 20.0, 20.0, 110.0, 54.0)) || is_key_pressed(KeyCode::Escape) {
+                    ui_tap = false;
+                    require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::MainMenu;
                 }
                 if ui_tap && hit(ptr, VIRTUAL_WIDTH - 170.0, 20.0, 150.0, 54.0) {
+                    ui_tap = false;
                     button_lock_timer = BUTTON_LOCK_DELAY;
                     leaderboard.refresh().await;
                     leaderboard_status = leaderboard.status.clone();
@@ -477,6 +504,8 @@ pub async fn game_main() {
             GameState::GalaxyMap => {
                 // Back button (top left)
                 if (ui_tap && hit(ptr, 20.0, 20.0, 90.0, 50.0)) || is_key_pressed(KeyCode::Escape) {
+                    ui_tap = false;
+                    require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::MainMenu;
                 }
@@ -491,6 +520,7 @@ pub async fn game_main() {
                 for c in 0..3 {
                     let tx = tab_start_x + c as f32 * (tab_w + tab_gap);
                     if ui_tap && hit(ptr, tx, tab_y, tab_w, tab_h) {
+                        ui_tap = false;
                         button_lock_timer = BUTTON_LOCK_DELAY;
                         selected_chapter = c;
                     }
@@ -523,7 +553,10 @@ pub async fn game_main() {
                         && ui_tap
                         && hit(ptr, card_x, card_y, card_w, card_h)
                     {
+                        ui_tap = false;
+                        require_touch_release = true;
                         button_lock_timer = BUTTON_LOCK_DELAY;
+                        shop_return_state = GameState::MainMenu;
                         current_sector = idx;
                         let sec = &sectors[current_sector];
                         objective = ObjectiveTracker::new(sec.objective.clone());
@@ -560,6 +593,8 @@ pub async fn game_main() {
                     || is_key_pressed(KeyCode::P)
                     || is_key_pressed(KeyCode::Escape)
                 {
+                    ui_tap = false;
+                    require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::Paused;
                 }
@@ -590,12 +625,14 @@ pub async fn game_main() {
                 if ui_tap && ability_charges > 0 {
                     // Wave button
                     if in_wave_btn {
+                        ui_tap = false;
                         apply_ability(Ability::GravityWave, &mut bodies, &mut particles);
                         audio.play_fusion_chime(4);
                         ability_charges -= 1;
                         button_lock_timer = BUTTON_LOCK_DELAY;
                     } else if in_flare_btn {
                         // Flare button
+                        ui_tap = false;
                         apply_ability(Ability::SolarFlare, &mut bodies, &mut particles);
                         audio.play_fusion_chime(6);
                         ability_charges -= 1;
@@ -621,14 +658,14 @@ pub async fn game_main() {
                     && ptr.y >= 108.0
                     && ptr.y <= JAR_BOTTOM;
 
-                if is_held && in_aim_zone && !clicked_ui {
+                if is_held && in_aim_zone && !clicked_ui && !require_touch_release {
                     drop_x = ptr.x.clamp(JAR_LEFT + r, JAR_RIGHT - r);
                     is_aiming = true;
                 }
 
                 // Commit Drop on Release or Spacebar
                 let keyboard_drop = is_key_pressed(KeyCode::Space) || is_key_pressed(KeyCode::Down);
-                let commit_drop = (just_released && is_aiming && !clicked_ui) || keyboard_drop;
+                let commit_drop = (just_released && is_aiming && !clicked_ui && !require_touch_release) || keyboard_drop;
 
                 if commit_drop && drop_cooldown <= 0.0 {
                     let tier = next_tier;
@@ -722,7 +759,8 @@ pub async fn game_main() {
             // ── Sector Complete ──────────────────────────────────────────────
             GameState::SectorComplete => {
                 sector_complete_timer += dt;
-                if tap && hit(ptr, 90.0, 674.0, 540.0, 48.0) {
+                if ui_tap && hit(ptr, 90.0, 674.0, 540.0, 48.0) {
+                    ui_tap = false;
                     name_focused = true;
                     #[cfg(target_os = "android")]
                     macroquad::miniquad::window::show_keyboard(true);
@@ -748,7 +786,10 @@ pub async fn game_main() {
                     && (ui_tap && hit(ptr, cx - 150.0, nx_y, 300.0, 66.0)
                         || is_key_pressed(KeyCode::Space))
                 {
+                    ui_tap = false;
+                    require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
+                    shop_return_state = GameState::MainMenu;
                     current_sector += 1;
                     let sec = &sectors[current_sector];
                     objective = ObjectiveTracker::new(sec.objective.clone());
@@ -770,6 +811,8 @@ pub async fn game_main() {
                 // Galaxy Map button
                 let mp_y = nx_y + 84.0;
                 if ui_tap && hit(ptr, cx - 150.0, mp_y, 300.0, 60.0) {
+                    ui_tap = false;
+                    require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::GalaxyMap;
                 }
@@ -789,10 +832,14 @@ pub async fn game_main() {
                     || is_key_pressed(KeyCode::Escape)
                     || is_key_pressed(KeyCode::Space)
                 {
+                    ui_tap = false;
+                    require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::Playing;
                 }
                 if ui_tap && hit(ptr, bx, qy, bw, 66.0) {
+                    ui_tap = false;
+                    require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
                     if current_score > 0 {
                         danger_timer = DANGER_TIME;
@@ -805,8 +852,12 @@ pub async fn game_main() {
                         name_focused = true;
                         #[cfg(target_os = "android")]
                         macroquad::miniquad::window::show_keyboard(true);
+                        shop_return_state = GameState::GameOver;
                         game_state = GameState::GameOver;
                     } else {
+                        current_score = 0;
+                        run_stardust = 0;
+                        shop_return_state = GameState::MainMenu;
                         game_state = GameState::MainMenu;
                     }
                 }
@@ -1498,6 +1549,10 @@ pub async fn game_main() {
                 draw_rectangle_lines(180.0, 752.0, 360.0, 54.0, 1.5, WHITE);
                 draw_centered("SAVE SCORE & RETURN HOME", cx, 787.0, 19.0, WHITE, f);
                 sector_submit = submit_hover && ui_tap;
+                if sector_submit {
+                    require_touch_release = true;
+                    button_lock_timer = BUTTON_LOCK_DELAY;
+                }
 
                 // Next Sector button
                 let nx_y = VIRTUAL_HEIGHT * 0.65;
@@ -1659,6 +1714,10 @@ pub async fn game_main() {
                     ui_tap,
                     f,
                 );
+                if go_action != GameOverAction::None {
+                    require_touch_release = true;
+                    button_lock_timer = BUTTON_LOCK_DELAY;
+                }
                 if web_submit {
                     go_action = GameOverAction::SaveScore;
                 }
@@ -1677,6 +1736,10 @@ pub async fn game_main() {
                     ui_tap,
                     f,
                 );
+                if !matches!(shop_action, ShopAction::None) {
+                    require_touch_release = true;
+                    button_lock_timer = BUTTON_LOCK_DELAY;
+                }
             }
 
             // ── Ad Overlay ───────────────────────────────────────────────────
@@ -1688,6 +1751,8 @@ pub async fn game_main() {
         // ── Resolve Modal Actions ────────────────────────────────────────────
         match go_action {
             GameOverAction::WatchAdRevive => {
+                require_touch_release = true;
+                button_lock_timer = BUTTON_LOCK_DELAY;
                 if ads.start_rewarded_ad(RewardType::EventHorizonRevive) {
                     ad_status.clear();
                     game_state = GameState::WatchingAd;
@@ -1696,6 +1761,8 @@ pub async fn game_main() {
                 }
             }
             GameOverAction::WatchAdDoubleStardust => {
+                require_touch_release = true;
+                button_lock_timer = BUTTON_LOCK_DELAY;
                 if ads.start_rewarded_ad(RewardType::DoubleStardust) {
                     ad_status.clear();
                     game_state = GameState::WatchingAd;
@@ -1704,6 +1771,9 @@ pub async fn game_main() {
                 }
             }
             GameOverAction::Restart => {
+                require_touch_release = true;
+                button_lock_timer = BUTTON_LOCK_DELAY;
+                shop_return_state = GameState::MainMenu;
                 ad_status.clear();
                 let sec = &sectors[current_sector];
                 objective = ObjectiveTracker::new(sec.objective.clone());
@@ -1722,28 +1792,46 @@ pub async fn game_main() {
                 game_state = GameState::Playing;
             }
             GameOverAction::OpenShop => {
+                require_touch_release = true;
+                button_lock_timer = BUTTON_LOCK_DELAY;
+                shop_return_state = GameState::GameOver;
                 game_state = GameState::Shop;
             }
             GameOverAction::SaveScore => {
-                match validate_public_name(&save_data.public_name) {
-                    Err(message) => leaderboard_status = message.to_string(),
-                    Ok(name) => match save_mgr.save(&save_data) {
-                        Err(_) => {
-                            leaderboard_status =
-                                "Could not save. Check storage access and try again.".to_string();
-                        }
-                        Ok(()) => {
-                            leaderboard.submit(&name, current_score).await;
-                            leaderboard_status = leaderboard.status.clone();
-                            game_state = GameState::MainMenu;
-                        }
-                    },
+                require_touch_release = true;
+                button_lock_timer = BUTTON_LOCK_DELAY;
+                let name_trim = save_data.public_name.trim();
+                if name_trim.is_empty() {
+                    current_score = 0;
+                    run_stardust = 0;
+                    shop_return_state = GameState::MainMenu;
+                    game_state = GameState::MainMenu;
+                } else {
+                    match validate_public_name(&save_data.public_name) {
+                        Err(message) => leaderboard_status = message.to_string(),
+                        Ok(name) => match save_mgr.save(&save_data) {
+                            Err(_) => {
+                                leaderboard_status =
+                                    "Could not save. Check storage access and try again.".to_string();
+                            }
+                            Ok(()) => {
+                                leaderboard.submit(&name, current_score).await;
+                                leaderboard_status = leaderboard.status.clone();
+                                current_score = 0;
+                                run_stardust = 0;
+                                shop_return_state = GameState::MainMenu;
+                                game_state = GameState::MainMenu;
+                            }
+                        },
+                    }
                 }
             }
             GameOverAction::None => {}
         }
 
         if sector_submit || (web_submit && game_state == GameState::SectorComplete) {
+            require_touch_release = true;
+            button_lock_timer = BUTTON_LOCK_DELAY;
             match validate_public_name(&save_data.public_name) {
                 Err(message) => leaderboard_status = message.to_string(),
                 Ok(name) => match save_mgr.save(&save_data) {
@@ -1754,6 +1842,9 @@ pub async fn game_main() {
                     Ok(()) => {
                         leaderboard.submit(&name, current_score).await;
                         leaderboard_status = leaderboard.status.clone();
+                        current_score = 0;
+                        run_stardust = 0;
+                        shop_return_state = GameState::MainMenu;
                         game_state = GameState::MainMenu;
                     }
                 },
@@ -1762,6 +1853,8 @@ pub async fn game_main() {
 
         match shop_action {
             ShopAction::BuyItem(ref sku) => {
+                require_touch_release = true;
+                button_lock_timer = BUTTON_LOCK_DELAY;
                 if sku.contains("removeads") {
                     billing.purchase_product(sku).ok();
                     save_data.ads_removed = true;
@@ -1785,16 +1878,16 @@ pub async fn game_main() {
                 let _ = save_mgr.save(&save_data);
             }
             ShopAction::EquipSkin(ref sid) => {
+                require_touch_release = true;
+                button_lock_timer = BUTTON_LOCK_DELAY;
                 save_data.equipped_skin = sid.clone();
                 let _ = save_mgr.save(&save_data);
             }
             ShopAction::Close => {
                 shop_msg = None;
-                game_state = if current_score > 0 {
-                    GameState::GameOver
-                } else {
-                    GameState::MainMenu
-                };
+                require_touch_release = true;
+                button_lock_timer = BUTTON_LOCK_DELAY;
+                game_state = shop_return_state;
             }
             ShopAction::None => {}
         }
@@ -1805,6 +1898,7 @@ pub async fn game_main() {
             || !matches!(shop_action, ShopAction::None)
             || sector_submit
         {
+            require_touch_release = true;
             button_lock_timer = BUTTON_LOCK_DELAY;
         }
 

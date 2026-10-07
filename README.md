@@ -5,6 +5,18 @@ A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, a
 **[Play GraviPop](https://graviity-zeta.vercel.app/)** · [Game source](src/lib.rs) · [Android app](android/app) · [Shared leaderboard API](api/leaderboard.js)
 
 ## Recent updates
+- **Case-Sensitive Global Leaderboard Names.**
+  - **Preserves Exact Casing:** Player callsigns with different capitalization (e.g. `areeb`, `Areeb`, and `AREEB`) are treated and stored as distinct identities on the global shared leaderboard.
+  - **Exact String Indexing:** Removed `.toLowerCase()` key flattening in `api/leaderboard.js`. Both deduplication maps, personal best comparison lookups, and score deletion endpoints now match exact character sequences.
+- **Merge Contact Priority Over Physics Nudges.**
+  - **Connection-First Fusion:** Refactored `CollisionEngine::resolve_collisions` in `src/physics/collision.rs` so that connecting bodies of the same tier are checked and merged *first* before any collision passes or impulse calculations are processed.
+  - **Equal-Tier Nudge Elimination:** Strictly guarded the unstable equilibrium break nudge with `a.tier != b.tier && top_radius > bottom_radius * 1.15`. Two planets of the same tier are never nudged or deflected sideways.
+  - **Equal-Tier Roll-Off Suppression:** Restricted curvature roll-off torque to `a.tier != b.tier`, allowing newly merged planets and dropped planets to connect and fuse smoothly without sliding apart.
+  - **Secondary Fusion Pass:** A second fusion check executes after positional separation passes to catch planets brought together during solver iterations.
+- **Mid-Screen 5.0-Second Overflow Countdown Timer & HUD Alert.**
+  - **5-Second Grace Window:** Replaced instantaneous game-over triggers with an active 5.0-second countdown (`DANGER_TIME = 5.0` in `src/core/config.rs`).
+  - **Dynamic Recovery Loop:** In `src/lib.rs`, `danger_timer` accumulates only while settled bodies breach `JAR_TOP_LINE`. If the player fuses overflowing planets or uses an ability to lower the stack, danger clears and the timer smoothly decays back to 0.0s.
+  - **Pulsing Mid-Screen Warning Display:** In `src/ui/hud.rs`, when overflow danger begins, an animated dark crimson HUD badge displays right at the overflow rim line (`y = 365.0`) with pulsing neon borders, live countdown text (`OVERFLOW IN 4.8s`), and an animated draining progress bar.
 - **Global Leaderboard Score Deletion & Duplicate Username Handling.**
   - **Try-Catch Existing Username Protection:** When submitting a score (`submitGlobalScore`), a `try...catch` block inspects current global entries. If a matching username (case-insensitive) already exists, it compares scores: lower scores will not downgrade the player's recorded personal best, while higher scores overwrite the existing entry and clean up stale duplicates in Dreamlo.
   - **Case-Insensitive Deduplication:** `fetchGlobalLeaderboard` filters and groups all entries by canonical username, guaranteeing each player holds exactly one leaderboard slot with their highest achieved score.

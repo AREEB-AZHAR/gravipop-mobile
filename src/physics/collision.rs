@@ -17,9 +17,76 @@ pub struct CollisionEngine;
 
 impl CollisionEngine {
     /// Solve solid contacts, contain bodies, then fuse eligible touching pairs.
-    /// Merges use the shared cooldown, so a new body cannot chain instantly.
+    /// Fuse eligible touching pairs of identical celestial tier.
+    fn fuse_eligible_pairs(bodies: &mut Vec<CelestialBody>, fusions: &mut Vec<FusionEvent>) -> bool {
+        let mut removed = vec![false; bodies.len()];
+        let mut added = Vec::new();
+        'pairs: for i in 0..bodies.len() {
+            if removed[i] {
+                continue;
+            }
+            for j in (i + 1)..bodies.len() {
+                if removed[j] {
+                    continue;
+                }
+                let a = &bodies[i];
+                let b = &bodies[j];
+                if a.tier != b.tier || a.age < MERGE_COOLDOWN || b.age < MERGE_COOLDOWN {
+                    continue;
+                }
+                let touch_dist = a.radius + b.radius + 0.35;
+                if (b.pos - a.pos).length_squared() > touch_dist * touch_dist {
+                    continue;
+                }
+                let Some(tier) = a.tier.next_tier() else {
+                    continue;
+                };
+
+                let radius = tier.radius();
+                let pos = ((a.pos + b.pos) * 0.5).clamp(
+                    Vec2::new(JAR_LEFT + radius, JAR_TOP_LINE + radius),
+                    Vec2::new(JAR_RIGHT - radius, JAR_BOTTOM - radius),
+                );
+                let mass = a.mass + b.mass;
+                let velocity = (a.vel * a.mass + b.vel * b.mass) / mass.max(0.001) * 0.40;
+                let id = a.id.wrapping_mul(2654435761) ^ b.id ^ (fusions.len() as u64);
+                let mut merged = CelestialBody::new(id, tier, pos, velocity);
+                merged.age = 0.0;
+                added.push(merged);
+                removed[i] = true;
+                removed[j] = true;
+                fusions.push(FusionEvent {
+                    pos,
+                    new_tier: tier,
+                    score_awarded: tier.score_value(),
+                    stardust_awarded: STARDUST_PER_FUSION_BASE * (tier as u32 + 1),
+                });
+                continue 'pairs;
+            }
+        }
+        let any_removed = removed.iter().any(|v| *v);
+        if any_removed {
+            let mut idx = 0;
+            bodies.retain(|_| {
+                let keep = !removed[idx];
+                idx += 1;
+                keep
+            });
+            bodies.extend(added);
+        }
+        any_removed
+    }
+
+    /// Solve solid contacts, contain bodies, and fuse eligible touching pairs.
+    /// Connecting pairs are checked FIRST before applying any collision or nudge forces.
     pub fn resolve_collisions(bodies: &mut Vec<CelestialBody>) -> Vec<FusionEvent> {
         let mut fusions = Vec::new();
+
+        // 1. Connection-First Fusion Check:
+        // When a planet drops or contacts a matching partner, immediately fuse them
+        // BEFORE applying any physical separation or apex break nudges.
+        Self::fuse_eligible_pairs(bodies, &mut fusions);
+
         for _ in 0..COLLISION_PASSES {
             for i in 0..bodies.len() {
                 for j in (i + 1)..bodies.len() {
@@ -40,8 +107,9 @@ impl CollisionEngine {
                     };
 
                     // Unstable Equilibrium Break: A large planet cannot balance on the sharp apex of a smaller body.
-                    // If nearly vertically centered (|dx| < 3.5px) and top body is significant, apply a slight deterministic nudge.
-                    if delta.x.abs() < 3.5 && (top_radius >= bottom_radius * 0.75) {
+                    // Strictly applies ONLY when tiers differ (a.tier != b.tier) and top body is distinctly larger.
+                    // Equal-tier planets (which are meant to fuse on contact) must NEVER be nudged!
+                    if a.tier != b.tier && delta.x.abs() < 3.5 && (top_radius >= bottom_radius * 1.15) {
                         let sign = if (a.id ^ b.id) % 2 == 0 { 1.0 } else { -1.0 };
                         delta.x = if delta.x.abs() < 0.1 { sign * 3.0 } else { delta.x.signum() * 3.0 };
                     }
@@ -74,13 +142,14 @@ impl CollisionEngine {
                     // Curvature Roll-Off Dynamics: Downward gravity along the curved contact slope
                     // exerts a lateral rolling torque (F_roll = g * sin(theta) * cos(theta)).
                     // Large bodies roll off small bodies instead of magically perching on top.
+                    // Strictly applies ONLY when tiers differ so matching planets do not roll away from each other.
                     let (norm_to_top, top_inv, bot_inv) = if top_is_b {
                         (normal, inverse_b, inverse_a)
                     } else {
                         (-normal, inverse_a, inverse_b)
                     };
                     let vertical_contact = (-norm_to_top.y).max(0.0);
-                    if vertical_contact > 0.10 {
+                    if a.tier != b.tier && vertical_contact > 0.10 {
                         let size_multiplier = (top_radius / bottom_radius).max(1.0).min(3.2);
                         let roll_component = norm_to_top.x * vertical_contact;
                         let roll_impulse = 52.0 * roll_component * size_multiplier;
@@ -130,59 +199,8 @@ impl CollisionEngine {
             }
         }
 
-        let mut removed = vec![false; bodies.len()];
-        let mut added = Vec::new();
-        'pairs: for i in 0..bodies.len() {
-            if removed[i] {
-                continue;
-            }
-            for j in (i + 1)..bodies.len() {
-                if removed[j] {
-                    continue;
-                }
-                let a = &bodies[i];
-                let b = &bodies[j];
-                if a.tier != b.tier || a.age < MERGE_COOLDOWN || b.age < MERGE_COOLDOWN {
-                    continue;
-                }
-                if (b.pos - a.pos).length_squared() > (a.radius + b.radius + 0.25).powi(2) {
-                    continue;
-                }
-                let Some(tier) = a.tier.next_tier() else {
-                    continue;
-                };
-
-                let radius = tier.radius();
-                let pos = ((a.pos + b.pos) * 0.5).clamp(
-                    Vec2::new(JAR_LEFT + radius, JAR_TOP_LINE + radius),
-                    Vec2::new(JAR_RIGHT - radius, JAR_BOTTOM - radius),
-                );
-                let mass = a.mass + b.mass;
-                let velocity = (a.vel * a.mass + b.vel * b.mass) / mass.max(0.001) * 0.40;
-                let id = a.id.wrapping_mul(2654435761) ^ b.id ^ (fusions.len() as u64);
-                let mut merged = CelestialBody::new(id, tier, pos, velocity);
-                merged.age = 0.0;
-                added.push(merged);
-                removed[i] = true;
-                removed[j] = true;
-                fusions.push(FusionEvent {
-                    pos,
-                    new_tier: tier,
-                    score_awarded: tier.score_value(),
-                    stardust_awarded: STARDUST_PER_FUSION_BASE * (tier as u32 + 1),
-                });
-                continue 'pairs;
-            }
-        }
-        if removed.iter().any(|v| *v) {
-            let mut idx = 0;
-            bodies.retain(|_| {
-                let keep = !removed[idx];
-                idx += 1;
-                keep
-            });
-            bodies.extend(added);
-        }
+        // 2. Secondary Fusion Pass: Capture any bodies that contacted during collision solver iterations
+        Self::fuse_eligible_pairs(bodies, &mut fusions);
 
         // Quiet bodies touching the floor settle without accumulating tiny jitter.
         for body in bodies.iter_mut() {
@@ -348,5 +366,21 @@ mod tests {
             "Large planet should roll off small planet; delta_x was only {}",
             delta_x
         );
+    }
+
+    #[test]
+    fn equal_tier_drop_connects_and_merges_without_sideways_nudge() {
+        let radius = CelestialTier::Moon.radius();
+        // Two Moons vertically aligned, one touching the other
+        let mut bodies = vec![
+            body(10, CelestialTier::Moon, 360.0, 800.0, 1.0),
+            body(11, CelestialTier::Moon, 360.0, 800.0 - radius * 2.0 + 1.0, 1.0),
+        ];
+        let events = CollisionEngine::resolve_collisions(&mut bodies);
+        assert_eq!(events.len(), 1, "Touching equal tier bodies must merge immediately");
+        assert_eq!(bodies.len(), 1);
+        assert_eq!(bodies[0].tier, CelestialTier::Terrestrial);
+        // The merged body's X position must remain aligned (never pushed sideways by nudge)
+        assert!((bodies[0].pos.x - 360.0).abs() < 0.1, "Merged body must remain centered");
     }
 }

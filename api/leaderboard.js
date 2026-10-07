@@ -19,13 +19,13 @@ export async function fetchGlobalLeaderboard() {
     }
     const list = Array.isArray(rawEntries) ? rawEntries : [rawEntries];
 
-    // Deduplicate by username (case-insensitive), keeping each player's highest score
+    // Deduplicate by username (preserving exact casing for distinct names), keeping each player's highest score
     const byName = new Map();
     for (const item of list) {
       if (!item || !item.name || typeof item.score === "undefined") continue;
       const displayName = decodeURIComponent(item.name).replace(/\+/g, " ").trim();
       const score = Math.max(0, parseInt(item.score, 10) || 0);
-      const key = displayName.toLowerCase();
+      const key = displayName;
       if (!byName.has(key) || score > byName.get(key).high_score) {
         byName.set(key, { display_name: displayName, high_score: score });
       }
@@ -50,11 +50,11 @@ export async function submitGlobalScore(name, score) {
     throw new Error("Display name must be between 3 and 20 characters");
   }
 
-  // 1. Try-catch to check for existing username entries on the leaderboard
+  // 1. Try-catch to check for existing username entries on the leaderboard (exact case-match)
   try {
     const existingScores = await fetchGlobalLeaderboard();
     const existingEntry = existingScores.find(
-      entry => entry.display_name.toLowerCase() === cleanName.toLowerCase()
+      entry => entry.display_name === cleanName
     );
 
     if (existingEntry) {
@@ -91,11 +91,11 @@ export async function deleteGlobalScore(name) {
     throw new Error("Display name is required for deletion");
   }
 
-  // Also remove case variations from Dreamlo
+  // Also remove exact matching entries from Dreamlo
   try {
     const existingScores = await fetchGlobalLeaderboard();
     const matches = existingScores.filter(
-      entry => entry.display_name.toLowerCase() === cleanName.toLowerCase()
+      entry => entry.display_name === cleanName
     );
     for (const m of matches) {
       const enc = encodeURIComponent(m.display_name);

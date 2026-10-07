@@ -123,10 +123,10 @@ impl Hud {
             Color::new(0.56, 0.78, 1.0, 0.90),
         );
 
-        // ── 3. Danger Warning Banner (at top edge) ────────────────────────────
-        if danger_timer > 0.3 {
+        // ── 3. Danger Warning Banner & Mid-Screen Countdown ───────────────────
+        if danger_timer > 0.05 {
             let t = (danger_timer / CRITICAL_TIME_LIMIT).clamp(0.0, 1.0);
-            let pulse = (get_time() as f32 * 14.0).sin().abs();
+            let pulse = (get_time() as f32 * 10.0).sin().abs();
             let alpha = 0.45 + t * 0.55 * pulse;
             draw_rectangle(
                 0.0,
@@ -134,6 +134,46 @@ impl Hud {
                 VIRTUAL_WIDTH,
                 8.0,
                 Color::new(1.0, 0.20, 0.25, alpha),
+            );
+
+            // Mid-Screen 5.0s Overflow Countdown Timer
+            let remaining = (CRITICAL_TIME_LIMIT - danger_timer).max(0.0);
+            let box_w = 340.0;
+            let box_h = 58.0;
+            let box_x = cx - box_w * 0.5;
+            let box_y = 365.0;
+
+            // Semi-transparent dark alert backdrop with pulsing neon red border
+            let bg_color = Color::new(0.18 + 0.12 * pulse, 0.02, 0.04, 0.92);
+            let border_color = Color::new(1.0, 0.25 + 0.35 * pulse, 0.30, 0.98);
+            draw_rectangle(box_x, box_y, box_w, box_h, bg_color);
+            draw_rectangle_lines(box_x - 1.5, box_y - 1.5, box_w + 3.0, box_h + 3.0, 1.0, Color::new(1.0, 0.20, 0.25, 0.35 + 0.25 * pulse));
+            draw_rectangle_lines(box_x, box_y, box_w, box_h, 2.5, border_color);
+
+            let timer_str = format!("OVERFLOW IN {:.1}s", remaining);
+            center_txt(
+                &timer_str,
+                cx,
+                box_y + 30.0,
+                23.0,
+                Color::new(1.0, 0.94, 0.94, 1.0),
+            );
+
+            // Sleek animated progress bar draining with remaining countdown
+            let bar_margin = 24.0;
+            let bar_w = box_w - bar_margin * 2.0;
+            let bar_h = 5.0;
+            let bar_x = box_x + bar_margin;
+            let bar_y = box_y + box_h - 11.0;
+            let progress_ratio = (remaining / CRITICAL_TIME_LIMIT).clamp(0.0, 1.0);
+
+            draw_rectangle(bar_x, bar_y, bar_w, bar_h, Color::new(0.28, 0.08, 0.10, 0.85));
+            draw_rectangle(
+                bar_x,
+                bar_y,
+                bar_w * progress_ratio,
+                bar_h,
+                Color::new(1.0, 0.30 + 0.30 * pulse, 0.35, 1.0),
             );
         }
     }

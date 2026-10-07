@@ -735,24 +735,27 @@ pub async fn game_main() {
                     save_data.high_score = current_score;
                 }
 
-                // Endless runs end only when a settled planet reaches the open rim.
+                // Endless runs end only when a settled planet remains above the rim for a full 5-second countdown.
                 let any_danger = bodies.iter().any(|b| b.above_danger_line());
                 if any_danger {
-                    danger_timer = DANGER_TIME;
-                    audio.play_game_over();
-                    save_data.runs_played += 1;
-                    save_data.stardust += run_stardust;
-                    let _ = save_mgr.save(&save_data);
-                    if !billing.is_ad_removed()
-                        && save_data.runs_played.is_multiple_of(INTERSTITIAL_RUN_INTERVAL)
-                        && ads.start_interstitial_ad()
-                    {
-                        game_state = GameState::WatchingAd;
-                    } else {
-                        game_state = GameState::GameOver;
+                    danger_timer += dt;
+                    if danger_timer >= DANGER_TIME {
+                        danger_timer = DANGER_TIME;
+                        audio.play_game_over();
+                        save_data.runs_played += 1;
+                        save_data.stardust += run_stardust;
+                        let _ = save_mgr.save(&save_data);
+                        if !billing.is_ad_removed()
+                            && save_data.runs_played.is_multiple_of(INTERSTITIAL_RUN_INTERVAL)
+                            && ads.start_interstitial_ad()
+                        {
+                            game_state = GameState::WatchingAd;
+                        } else {
+                            game_state = GameState::GameOver;
+                        }
                     }
                 } else if danger_timer > 0.0 {
-                    danger_timer = (danger_timer - dt * 2.0).max(0.0);
+                    danger_timer = (danger_timer - dt * 1.5).max(0.0);
                 }
             }
 

@@ -24,7 +24,7 @@ pub const MERGE_COOLDOWN: f32 = 0.25;
 pub const COLLISION_PASSES: usize = 6;
 
 // ── Danger / game-over ────────────────────────────────────────────────────────
-pub const DANGER_TIME: f32 = 2.5;
+pub const DANGER_TIME: f32 = 5.0;
 pub const CRITICAL_TIME_LIMIT: f32 = DANGER_TIME; // alias used in hud
 
 // ── Abilities (earn 1 charge per milestone merge, max 3 active) ───────────────

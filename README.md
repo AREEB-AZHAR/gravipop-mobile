@@ -6,6 +6,14 @@ A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, a
 
 ## Recent updates
 
+- **Official Android App Launcher Icons.** Transcoded official launcher and adaptive/round launcher icons across `mipmap-mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, and `xxxhdpi` from `assets/gravipop_icon.jpg`, binding `@mipmap/ic_launcher` and `@mipmap/ic_launcher_round` in `android/app/src/main/AndroidManifest.xml`.
+- **Resolved NDK Deprecation Warning [CXX5106].** Cleaned deprecated `ndk.dir` from `android/local.properties`. Gradle builds now configure native compilation directly through `android.ndkVersion = '28.2.13676358'` in `android/app/build.gradle` without deprecation notices.
+- **Top & Bottom Mobile Letterbox Ads.** For modern ultra-tall mobile viewports (19.5:9 / 20:9) where the 9:16 game canvas leaves vertical letterbox margins at the top and bottom, added dynamic `#ad-rail-top` and `#ad-rail-bottom` banner ad slots in `web/gravipop_ads.js`, `index.html`, and `src/web/style.css`.
+- **Mobile Soft Keyboard Stability & No Resize.** Eliminated laggy canvas resizes and viewport distortions when opening the on-screen keyboard to enter player callsigns:
+  - Android: Configured `android:windowSoftInputMode="adjustNothing|stateHidden"` and `keyboard|keyboardHidden` in `AndroidManifest.xml` to lock `SurfaceView` dimensions during text entry.
+  - Web: Configured meta viewport with `interactive-widget=overlays-content` and `viewport-fit=cover` in `index.html` and `web/index.html`.
+- **Pause Menu End-Run Score Upload Prompt.** Ending a run early from the Pause Menu now routes directly to the End Run / Score submission screen whenever `current_score > 0`, prompting players to record their name/callsign and stardust earnings instead of silently discarding run achievements.
+- **Polished Cosmic Glassmorphism UI.** Completely revamped the Main Menu and Pause screens in `src/lib.rs` with glowing dual-border obsidian cards, title drop-shadows, all-time best stat badges, and styled pill buttons ("Play Endless", "Cosmic Store", "Leaderboard", "Resume Flight", "End Run & Submit Score").
 - **Resolved PDB output filename collision.** Renamed the desktop binary target to `gravipop-desktop` in `Cargo.toml` and build scripts, eliminating the Cargo 1.97 warning on Windows MSVC where `gravipop-mobile` (bin) and `gravipop_mobile` (lib) collided on `gravipop_mobile.pdb`.
 - **Verified modern Android APK pipeline.** Documented why `cargo quad-apk` panics on modern Rust toolchains (lockfile v4 and edition 2024 incompatibility in cargo 0.62) and validated the production-grade `npm run build:android` + Gradle workflow generating verified `app-debug.apk` (15.6 MB) with NDK 28.2.
 - **One result-screen save action.** Game Over and Sector Complete center scores and rewards. **Save Score & Return Home** validates the callsign, saves progress, submits once, and returns home. The web textbox has no duplicate submit button; Enter uses the same action.

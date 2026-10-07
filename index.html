@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
   <meta name="theme-color" content="#070814">
   <meta name="description" content="GraviPop: Stellar Conservatory — High-performance cosmic merge puzzle game in pure Rust & WebAssembly.">
   <title>GraviPop: Stellar Conservatory</title>
@@ -55,6 +55,14 @@
 
       <!-- Center Game Arena -->
       <section id="game-arena">
+        <aside id="ad-rail-top" class="ad-rail-mobile ad-rail-top" aria-label="Top mobile banner advertisement" hidden>
+          <span class="ad-label">Advertisement</span>
+          <div id="google-ad-top" class="google-ad-slot"></div>
+        </aside>
+        <aside id="ad-rail-bottom" class="ad-rail-mobile ad-rail-bottom" aria-label="Bottom mobile banner advertisement" hidden>
+          <span class="ad-label">Advertisement</span>
+          <div id="google-ad-bottom" class="google-ad-slot"></div>
+        </aside>
         <aside id="ad-rail-left" class="ad-rail ad-rail-left" aria-label="Left sidebar advertisement" hidden>
           <span class="ad-label">Advertisement</span>
           <div id="google-ad-left" class="google-ad-slot"></div>

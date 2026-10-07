@@ -442,6 +442,46 @@ html, body {
 .ad-rail-left { left: 16px; }
 .ad-rail-right { right: 16px; }
 
+/* ── Mobile Vertical Letterbox Ad Rails (Upper & Lower) ── */
+.ad-rail-mobile {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 24;
+  pointer-events: auto;
+  width: 100%;
+  max-width: 460px;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  overflow: hidden;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.ad-rail-mobile[hidden] { display: none; }
+.ad-rail-top { top: 6px; }
+.ad-rail-bottom { bottom: 6px; }
+
+.ad-rail-mobile .ad-label {
+  font-size: 9px;
+  margin-bottom: 2px;
+  opacity: 0.85;
+}
+
+.ad-rail-mobile .google-ad-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  width: 100%;
+  border-radius: 8px;
+  background: rgba(14, 18, 42, 0.55);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+}
+
 .ad-label {
   color: var(--text-sub);
   font-size: 10px;

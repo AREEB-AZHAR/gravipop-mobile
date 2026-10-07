@@ -389,12 +389,13 @@ pub async fn game_main() {
                     ad_bridge::show_privacy_options();
                 }
                 let cx = VIRTUAL_WIDTH * 0.5;
-                let bw = 340.0;
+                let bw = 360.0;
                 let bx = cx - bw * 0.5;
-                let play_y = VIRTUAL_HEIGHT * 0.58;
-                let shop_y = play_y + 85.0;
+                let play_y = VIRTUAL_HEIGHT * 0.52;
+                let shop_y = play_y + 92.0;
+                let lb_y = shop_y + 82.0;
 
-                if (tap && hit(ptr, bx, play_y, bw, 68.0))
+                if (tap && hit(ptr, bx, play_y, bw, 74.0))
                     || is_key_pressed(KeyCode::Space)
                     || is_key_pressed(KeyCode::Enter)
                 {
@@ -413,10 +414,10 @@ pub async fn game_main() {
                     is_aiming = false;
                     game_state = GameState::Playing;
                 }
-                if tap && hit(ptr, bx, shop_y, bw, 62.0) {
+                if tap && hit(ptr, bx, shop_y, bw, 66.0) {
                     game_state = GameState::Shop;
                 }
-                if tap && hit(ptr, bx, shop_y + 74.0, bw, 58.0) {
+                if tap && hit(ptr, bx, lb_y, bw, 62.0) {
                     leaderboard.refresh().await;
                     leaderboard_status = leaderboard.status.clone();
                     game_state = GameState::Leaderboard;
@@ -749,16 +750,35 @@ pub async fn game_main() {
             // ── Paused ───────────────────────────────────────────────────────
             GameState::Paused => {
                 let cx = VIRTUAL_WIDTH * 0.5;
-                let ry = VIRTUAL_HEIGHT * 0.42;
-                if (tap && hit(ptr, cx - 140.0, ry, 280.0, 64.0))
+                let card_y = VIRTUAL_HEIGHT * 0.26;
+                let bw = 380.0;
+                let bx = cx - bw * 0.5;
+                let ry = card_y + 242.0;
+                let qy = ry + 80.0;
+
+                if (tap && hit(ptr, bx, ry, bw, 66.0))
                     || is_key_pressed(KeyCode::P)
                     || is_key_pressed(KeyCode::Escape)
                     || is_key_pressed(KeyCode::Space)
                 {
                     game_state = GameState::Playing;
                 }
-                if tap && hit(ptr, cx - 140.0, ry + 84.0, 280.0, 64.0) {
-                    game_state = GameState::MainMenu;
+                if tap && hit(ptr, bx, qy, bw, 66.0) {
+                    if current_score > 0 {
+                        danger_timer = DANGER_TIME;
+                        save_data.runs_played += 1;
+                        save_data.stardust += run_stardust;
+                        if current_score > save_data.high_score {
+                            save_data.high_score = current_score;
+                        }
+                        let _ = save_mgr.save(&save_data);
+                        name_focused = true;
+                        #[cfg(target_os = "android")]
+                        macroquad::miniquad::window::show_keyboard(true);
+                        game_state = GameState::GameOver;
+                    } else {
+                        game_state = GameState::MainMenu;
+                    }
                 }
             }
 
@@ -831,130 +851,134 @@ pub async fn game_main() {
             GameState::MainMenu => {
                 let cx = VIRTUAL_WIDTH * 0.5;
 
-                // Title Banner
+                // Ad Privacy pill (if needed by consent)
                 if ad_bridge::privacy_options_required() {
-                    draw_rectangle(VIRTUAL_WIDTH - 210.0, 20.0, 190.0, 44.0, Color::new(0.12, 0.18, 0.28, 1.0));
-                    draw_centered("AD PRIVACY", VIRTUAL_WIDTH - 115.0, 50.0, 18.0, WHITE, f);
+                    let ap_hov = hit(ptr, VIRTUAL_WIDTH - 210.0, 20.0, 190.0, 44.0);
+                    draw_rectangle(
+                        VIRTUAL_WIDTH - 210.0,
+                        20.0,
+                        190.0,
+                        44.0,
+                        if ap_hov { Color::new(0.18, 0.26, 0.42, 0.95) } else { Color::new(0.10, 0.14, 0.24, 0.85) },
+                    );
+                    draw_rectangle_lines(VIRTUAL_WIDTH - 210.0, 20.0, 190.0, 44.0, 1.4, Color::new(0.40, 0.70, 1.0, 0.60));
+                    draw_centered("AD PRIVACY", VIRTUAL_WIDTH - 115.0, 48.0, 17.0, WHITE, f);
                 }
-                draw_rectangle(
-                    40.0,
-                    VIRTUAL_HEIGHT * 0.16,
-                    VIRTUAL_WIDTH - 80.0,
-                    220.0,
-                    Color::new(0.05, 0.04, 0.14, 0.85),
-                );
-                draw_rectangle_lines(
-                    40.0,
-                    VIRTUAL_HEIGHT * 0.16,
-                    VIRTUAL_WIDTH - 80.0,
-                    220.0,
-                    1.8,
-                    Color::new(0.45, 0.35, 0.80, 0.55),
-                );
-                draw_centered("GRAVIPOP", cx, VIRTUAL_HEIGHT * 0.28, 76.0, WHITE, f);
-                draw_centered(
-                    "STELLAR CONSERVATORY",
-                    cx,
-                    VIRTUAL_HEIGHT * 0.28 + 52.0,
-                    26.0,
-                    Color::new(0.40, 0.85, 1.0, 0.95),
-                    f,
-                );
-                draw_centered(
-                    "Restore the Persistent Galaxy",
-                    cx,
-                    VIRTUAL_HEIGHT * 0.28 + 92.0,
-                    20.0,
-                    Color::new(0.70, 0.70, 0.85, 0.80),
-                    f,
-                );
 
-                let hi_txt = format!("BEST SCORE  {}", save_data.high_score);
-                draw_centered(
-                    &hi_txt,
-                    cx,
-                    VIRTUAL_HEIGHT * 0.28 + 128.0,
-                    22.0,
-                    Color::new(1.0, 0.85, 0.30, 1.0),
-                    f,
-                );
+                // ── Hero Title Card ──
+                let card_x = 36.0;
+                let card_y = VIRTUAL_HEIGHT * 0.14;
+                let card_w = VIRTUAL_WIDTH - 72.0;
+                let card_h = 246.0;
 
-                // Explore Galaxy Button
-                let bw = 340.0;
+                // Outer soft halo
+                draw_rectangle(card_x - 3.0, card_y - 3.0, card_w + 6.0, card_h + 6.0, Color::new(0.14, 0.22, 0.52, 0.25));
+                // Frosted card fill
+                draw_rectangle(card_x, card_y, card_w, card_h, Color::new(0.06, 0.08, 0.20, 0.92));
+                // Glowing cosmic borders
+                draw_rectangle_lines(card_x, card_y, card_w, card_h, 1.8, Color::new(0.38, 0.72, 1.0, 0.75));
+                draw_rectangle_lines(card_x + 4.0, card_y + 4.0, card_w - 8.0, card_h - 8.0, 1.0, Color::new(0.20, 0.35, 0.70, 0.35));
+
+                // Title glow drop-shadow + crisp white text
+                draw_centered("GRAVIPOP", cx + 2.0, card_y + 78.0 + 2.0, 80.0, Color::new(0.15, 0.45, 0.95, 0.55), f);
+                draw_centered("GRAVIPOP", cx, card_y + 78.0, 80.0, WHITE, f);
+
+                // Subtitle in radiant cyan
+                draw_centered("STELLAR CONSERVATORY", cx, card_y + 124.0, 24.0, Color::new(0.42, 0.90, 1.0, 0.98), f);
+
+                // Cosmic separator line with center star
+                let div_y = card_y + 146.0;
+                draw_line(cx - 150.0, div_y, cx + 150.0, div_y, 1.2, Color::new(0.30, 0.55, 0.85, 0.45));
+                draw_circle(cx, div_y, 3.5, Color::new(0.55, 0.92, 1.0, 0.95));
+
+                // All-Time Best Badge
+                let best_badge_w = 320.0;
+                let best_badge_h = 42.0;
+                let best_badge_x = cx - best_badge_w * 0.5;
+                let best_badge_y = card_y + 168.0;
+                draw_rectangle(best_badge_x, best_badge_y, best_badge_w, best_badge_h, Color::new(0.10, 0.13, 0.30, 0.85));
+                draw_rectangle_lines(best_badge_x, best_badge_y, best_badge_w, best_badge_h, 1.4, Color::new(1.0, 0.80, 0.28, 0.75));
+                let hi_txt = format!("🏆 ALL-TIME BEST:  {}", save_data.high_score);
+                draw_centered(&hi_txt, cx, best_badge_y + 28.0, 20.0, Color::new(1.0, 0.88, 0.35, 1.0), f);
+
+                // ── Interactive Action Buttons ──
+                let bw = 360.0;
                 let bx = cx - bw * 0.5;
-                let play_y = VIRTUAL_HEIGHT * 0.58;
-                let play_hov = hit(ptr, bx, play_y, bw, 68.0);
+                let play_y = VIRTUAL_HEIGHT * 0.52;
+                let play_hov = hit(ptr, bx, play_y, bw, 74.0);
+
+                // 1. PLAY ENDLESS (Celestial Emerald)
+                if play_hov {
+                    draw_rectangle(bx - 3.0, play_y - 3.0, bw + 6.0, 80.0, Color::new(0.20, 0.82, 0.52, 0.35));
+                }
                 draw_rectangle(
                     bx,
                     play_y,
                     bw,
-                    68.0,
+                    74.0,
                     if play_hov {
-                        Color::new(0.28, 0.88, 0.48, 1.0)
+                        Color::new(0.18, 0.75, 0.46, 0.98)
                     } else {
-                        Color::new(0.18, 0.70, 0.34, 1.0)
+                        Color::new(0.11, 0.58, 0.35, 0.92)
                     },
                 );
-                draw_rectangle_lines(bx, play_y, bw, 68.0, 2.0, WHITE);
-                draw_vector_play(bx + 40.0, play_y + 34.0, 24.0, WHITE);
-                draw_centered("PLAY ENDLESS", cx + 12.0, play_y + 44.0, 26.0, WHITE, f);
+                draw_rectangle_lines(bx, play_y, bw, 74.0, 2.0, Color::new(0.45, 1.0, 0.70, 0.95));
+                draw_line(bx + 16.0, play_y + 3.0, bx + bw - 16.0, play_y + 3.0, 1.5, Color::new(0.65, 1.0, 0.82, 0.70));
+                draw_vector_play(bx + 42.0, play_y + 37.0, 26.0, WHITE);
+                draw_centered("PLAY ENDLESS", cx + 14.0, play_y + 48.0, 28.0, WHITE, f);
 
-                // Cosmic Shop Button
-                let shop_y = play_y + 85.0;
-                let shop_hov = hit(ptr, bx, shop_y, bw, 62.0);
+                // 2. COSMIC VAULT / STORE (Amethyst Nebula)
+                let shop_y = play_y + 92.0;
+                let shop_hov = hit(ptr, bx, shop_y, bw, 66.0);
+                if shop_hov {
+                    draw_rectangle(bx - 3.0, shop_y - 3.0, bw + 6.0, 72.0, Color::new(0.55, 0.30, 0.88, 0.30));
+                }
                 draw_rectangle(
                     bx,
                     shop_y,
                     bw,
-                    62.0,
+                    66.0,
                     if shop_hov {
-                        Color::new(0.55, 0.28, 0.86, 1.0)
+                        Color::new(0.50, 0.24, 0.82, 0.98)
                     } else {
-                        Color::new(0.38, 0.20, 0.66, 1.0)
+                        Color::new(0.34, 0.16, 0.60, 0.92)
                     },
                 );
-                draw_rectangle_lines(bx, shop_y, bw, 62.0, 1.8, WHITE);
-                draw_vector_gem(
-                    bx + 40.0,
-                    shop_y + 31.0,
-                    22.0,
-                    Color::new(0.40, 0.90, 1.0, 1.0),
-                );
-                draw_centered("COSMIC STORE", cx + 12.0, shop_y + 40.0, 24.0, WHITE, f);
+                draw_rectangle_lines(bx, shop_y, bw, 66.0, 1.8, Color::new(0.76, 0.48, 1.0, 0.90));
+                draw_line(bx + 16.0, shop_y + 3.0, bx + bw - 16.0, shop_y + 3.0, 1.2, Color::new(0.85, 0.65, 1.0, 0.60));
+                draw_vector_gem(bx + 42.0, shop_y + 33.0, 24.0, Color::new(0.50, 0.95, 1.0, 1.0));
+                draw_centered("COSMIC STORE", cx + 14.0, shop_y + 43.0, 25.0, WHITE, f);
 
-                let lb_y = shop_y + 74.0;
-                let lb_hov = hit(ptr, bx, lb_y, bw, 58.0);
+                // 3. GLOBAL LEADERBOARD (Sapphire Deep)
+                let lb_y = shop_y + 82.0;
+                let lb_hov = hit(ptr, bx, lb_y, bw, 62.0);
+                if lb_hov {
+                    draw_rectangle(bx - 3.0, lb_y - 3.0, bw + 6.0, 68.0, Color::new(0.20, 0.52, 0.85, 0.30));
+                }
                 draw_rectangle(
                     bx,
                     lb_y,
                     bw,
-                    58.0,
+                    62.0,
                     if lb_hov {
-                        Color::new(0.18, 0.55, 0.78, 1.0)
+                        Color::new(0.18, 0.50, 0.80, 0.98)
                     } else {
-                        Color::new(0.12, 0.38, 0.62, 1.0)
+                        Color::new(0.11, 0.33, 0.58, 0.92)
                     },
                 );
-                draw_rectangle_lines(bx, lb_y, bw, 58.0, 1.6, WHITE);
-                draw_centered("GLOBAL LEADERBOARD", cx, lb_y + 38.0, 22.0, WHITE, f);
+                draw_rectangle_lines(bx, lb_y, bw, 62.0, 1.8, Color::new(0.40, 0.80, 1.0, 0.85));
+                draw_line(bx + 16.0, lb_y + 3.0, bx + bw - 16.0, lb_y + 3.0, 1.2, Color::new(0.60, 0.88, 1.0, 0.55));
+                draw_centered("🏆  GLOBAL LEADERBOARD", cx, lb_y + 40.0, 22.0, WHITE, f);
 
-                // Stardust Badge at Bottom
-                let dust_cx = cx;
-                let dust_y = VIRTUAL_HEIGHT - 60.0;
-                draw_vector_gem(
-                    dust_cx - 65.0,
-                    dust_y - 6.0,
-                    20.0,
-                    Color::new(0.35, 0.85, 1.0, 1.0),
-                );
-                draw_txt(
-                    &format!("STARDUST: {}", save_data.stardust),
-                    dust_cx - 45.0,
-                    dust_y,
-                    22.0,
-                    Color::new(0.85, 0.95, 1.0, 1.0),
-                    f,
-                );
+                // ── Stardust Wallet Badge at Bottom ──
+                let dust_w = 300.0;
+                let dust_h = 44.0;
+                let dust_x = cx - dust_w * 0.5;
+                let dust_y = VIRTUAL_HEIGHT - 68.0;
+                draw_rectangle(dust_x, dust_y, dust_w, dust_h, Color::new(0.08, 0.10, 0.24, 0.85));
+                draw_rectangle_lines(dust_x, dust_y, dust_w, dust_h, 1.2, Color::new(0.35, 0.80, 1.0, 0.50));
+                draw_vector_gem(dust_x + 28.0, dust_y + 22.0, 22.0, Color::new(0.35, 0.85, 1.0, 1.0));
+                draw_centered(&format!("STARDUST:  {} ✨", save_data.stardust), cx + 10.0, dust_y + 29.0, 20.0, Color::new(0.85, 0.95, 1.0, 1.0), f);
 
                 // Desktop Keyboard Hint
                 draw_centered(
@@ -1492,47 +1516,97 @@ pub async fn game_main() {
                     BodyRenderer::draw_body(body);
                 }
                 particles.draw();
+
+                // Frosted backdrop
                 draw_rectangle(
                     0.0,
                     0.0,
                     VIRTUAL_WIDTH,
                     VIRTUAL_HEIGHT,
-                    Color::new(0.0, 0.0, 0.0, 0.75),
+                    Color::new(0.02, 0.03, 0.09, 0.82),
                 );
                 let cx = VIRTUAL_WIDTH * 0.5;
-                draw_centered("PAUSED", cx, VIRTUAL_HEIGHT * 0.32, 56.0, WHITE, f);
 
-                let ry = VIRTUAL_HEIGHT * 0.42;
-                let rh = hit(ptr, cx - 140.0, ry, 280.0, 64.0);
+                // Centered Frosted Modal Card
+                let card_w = 460.0;
+                let card_h = 420.0;
+                let card_x = cx - card_w * 0.5;
+                let card_y = VIRTUAL_HEIGHT * 0.26;
+
+                // Outer soft halo
+                draw_rectangle(card_x - 3.0, card_y - 3.0, card_w + 6.0, card_h + 6.0, Color::new(0.18, 0.35, 0.70, 0.25));
+                // Card body
+                draw_rectangle(card_x, card_y, card_w, card_h, Color::new(0.06, 0.08, 0.22, 0.95));
+                // Glowing border
+                draw_rectangle_lines(card_x, card_y, card_w, card_h, 2.0, Color::new(0.38, 0.75, 1.0, 0.85));
+                draw_rectangle_lines(card_x + 4.0, card_y + 4.0, card_w - 8.0, card_h - 8.0, 1.0, Color::new(0.20, 0.38, 0.75, 0.35));
+
+                // Header
+                draw_centered("⏸  MISSION PAUSED", cx, card_y + 48.0, 36.0, WHITE, f);
+                draw_centered("ORBITAL STABILIZERS ENGAGED", cx, card_y + 78.0, 16.0, Color::new(0.45, 0.85, 1.0, 0.85), f);
+                draw_line(card_x + 30.0, card_y + 96.0, card_x + card_w - 30.0, card_y + 96.0, 1.0, Color::new(0.30, 0.50, 0.85, 0.40));
+
+                // Run stats readout
+                let stat_box_w = 400.0;
+                let stat_box_h = 76.0;
+                let stat_box_x = cx - stat_box_w * 0.5;
+                let stat_box_y = card_y + 114.0;
+                draw_rectangle(stat_box_x, stat_box_y, stat_box_w, stat_box_h, Color::new(0.09, 0.12, 0.30, 0.75));
+                draw_rectangle_lines(stat_box_x, stat_box_y, stat_box_w, stat_box_h, 1.2, Color::new(0.25, 0.50, 0.85, 0.50));
+
+                let score_lbl = format!("SCORE: {}", current_score);
+                draw_centered(&score_lbl, cx, stat_box_y + 32.0, 24.0, Color::new(1.0, 0.88, 0.35, 1.0), f);
+
+                let dust_lbl = format!("STARDUST EARNED:  +{} ✨", run_stardust);
+                draw_centered(&dust_lbl, cx, stat_box_y + 60.0, 18.0, Color::new(0.55, 0.90, 1.0, 0.90), f);
+
+                // ── Interactive Buttons ──
+                let bw = 380.0;
+                let bx = cx - bw * 0.5;
+                let ry = card_y + 242.0;
+                let rh = hit(ptr, bx, ry, bw, 66.0);
+
+                // 1. RESUME FLIGHT (Emerald/Cyan)
+                if rh {
+                    draw_rectangle(bx - 3.0, ry - 3.0, bw + 6.0, 72.0, Color::new(0.20, 0.82, 0.50, 0.35));
+                }
                 draw_rectangle(
-                    cx - 140.0,
+                    bx,
                     ry,
-                    280.0,
-                    64.0,
+                    bw,
+                    66.0,
                     if rh {
-                        Color::new(0.28, 0.80, 0.45, 1.0)
+                        Color::new(0.18, 0.76, 0.46, 0.98)
                     } else {
-                        Color::new(0.18, 0.62, 0.34, 1.0)
+                        Color::new(0.11, 0.60, 0.36, 0.92)
                     },
                 );
-                draw_rectangle_lines(cx - 140.0, ry, 280.0, 64.0, 2.0, WHITE);
-                draw_centered("RESUME", cx, ry + 42.0, 28.0, WHITE, f);
+                draw_rectangle_lines(bx, ry, bw, 66.0, 2.0, Color::new(0.45, 1.0, 0.70, 0.95));
+                draw_line(bx + 16.0, ry + 3.0, bx + bw - 16.0, ry + 3.0, 1.5, Color::new(0.65, 1.0, 0.82, 0.65));
+                draw_vector_play(bx + 40.0, ry + 33.0, 24.0, WHITE);
+                draw_centered("RESUME FLIGHT", cx + 12.0, ry + 44.0, 26.0, WHITE, f);
 
-                let qy = ry + 84.0;
-                let qh = hit(ptr, cx - 140.0, qy, 280.0, 64.0);
+                // 2. END RUN (Ruby/Coral)
+                let qy = ry + 80.0;
+                let qh = hit(ptr, bx, qy, bw, 66.0);
+                if qh {
+                    draw_rectangle(bx - 3.0, qy - 3.0, bw + 6.0, 72.0, Color::new(0.85, 0.25, 0.35, 0.35));
+                }
                 draw_rectangle(
-                    cx - 140.0,
+                    bx,
                     qy,
-                    280.0,
-                    64.0,
+                    bw,
+                    66.0,
                     if qh {
-                        Color::new(0.72, 0.22, 0.22, 1.0)
+                        Color::new(0.78, 0.22, 0.30, 0.98)
                     } else {
-                        Color::new(0.55, 0.14, 0.14, 1.0)
+                        Color::new(0.58, 0.15, 0.22, 0.92)
                     },
                 );
-                draw_rectangle_lines(cx - 140.0, qy, 280.0, 64.0, 1.8, WHITE);
-                draw_centered("END RUN", cx, qy + 42.0, 26.0, WHITE, f);
+                draw_rectangle_lines(bx, qy, bw, 66.0, 1.8, Color::new(1.0, 0.45, 0.55, 0.90));
+                draw_line(bx + 16.0, qy + 3.0, bx + bw - 16.0, qy + 3.0, 1.5, Color::new(1.0, 0.70, 0.75, 0.55));
+                let end_label = if current_score > 0 { "END RUN & SUBMIT SCORE" } else { "ABANDON RUN" };
+                draw_centered(end_label, cx, qy + 44.0, 24.0, WHITE, f);
             }
 
             // ── GameOver ─────────────────────────────────────────────────────

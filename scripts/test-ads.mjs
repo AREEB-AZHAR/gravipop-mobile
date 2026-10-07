@@ -20,7 +20,7 @@ function harness(options = { mode: "test" }) {
     getBoundingClientRect() { return { width, height }; },
     focus() { focusCount++; },
   });
-  for (const id of ["canvas-wrapper", "ad-rail-left", "ad-rail-right", "google-ad-left", "google-ad-right", "ads-status", "glcanvas"]) elements.set(id, node());
+  for (const id of ["canvas-wrapper", "ad-rail-left", "ad-rail-right", "ad-rail-top", "ad-rail-bottom", "google-ad-left", "google-ad-right", "google-ad-top", "google-ad-bottom", "ads-status", "glcanvas"]) elements.set(id, node());
   const pubads = { addEventListener(name, callback) { listeners.set(name, callback); } };
   const newSlot = (path, kind, sizes) => {
     const slot = { path, kind, sizes, destroyed: false, addService() { return this; } };

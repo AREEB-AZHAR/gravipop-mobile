@@ -8,6 +8,8 @@
         interstitial: "/6355419/Travel/Europe/France/Paris",
         left: "/6355419/Travel/Europe",
         right: "/6355419/Travel/Europe",
+        top: "/6355419/Travel/Europe",
+        bottom: "/6355419/Travel/Europe",
     });
     const formats = { rewarded: "REWARDED", interstitial: "GAME_MANUAL_INTERSTITIAL" };
     const fullscreen = { rewarded: null, interstitial: null };
@@ -47,7 +49,7 @@
             .filter(([w, h]) => w <= width && h <= height);
         const visible = window.innerWidth > 1080 && !removed && !sdkFailed && sizes.length > 0
             && (config?.mode === "test" || config?.mode === "live");
-        return ["left", "right"].map((side) => {
+        const sideRails = ["left", "right"].map((side) => {
             const rail = document.getElementById(`ad-rail-${side}`);
             if (rail) {
                 rail.hidden = !visible || !config[side];
@@ -57,6 +59,29 @@
             }
             return { side, rail, sizes: visible ? sizes : [] };
         });
+
+        // Upper and lower vertical margins on tall mobile screens
+        const gameHeight = Math.min(bounds.width / 720, bounds.height / 1280) * 1280;
+        const verticalSpace = (bounds.height - gameHeight) / 2;
+        const isMobileScreen = window.innerWidth <= 1080 || bounds.width <= bounds.height * (720 / 1280) + 40;
+        const mobileSizes = [[468, 60], [320, 50], [300, 50]]
+            .filter(([w, h]) => w <= bounds.width - 16 && h <= Math.max(50, verticalSpace));
+        const mobileVisible = isMobileScreen && verticalSpace >= 48 && !removed && !sdkFailed && mobileSizes.length > 0
+            && (config?.mode === "test" || config?.mode === "live");
+
+        const mobileRails = ["top", "bottom"].map((side) => {
+            const rail = document.getElementById(`ad-rail-${side}`);
+            if (rail) {
+                rail.hidden = !mobileVisible || !config[side];
+                const label = rail.querySelector(".ad-label");
+                if (label) label.textContent = config.mode === "test" ? "TEST ADVERTISEMENT" : "ADVERTISEMENT";
+                if (side === "top") rail.style.top = `${Math.max(4, (verticalSpace - 58) / 2)}px`;
+                if (side === "bottom") rail.style.bottom = `${Math.max(4, (verticalSpace - 58) / 2)}px`;
+            }
+            return { side, rail, sizes: mobileVisible ? mobileSizes : [] };
+        });
+
+        return [...sideRails, ...mobileRails];
     }
 
     function destroyFullscreen(kind) {
@@ -190,7 +215,7 @@
         sdkFailed = true;
         clearTimeout(sdkTimer);
         setStatus("Ads unavailable");
-        for (const side of ["left", "right"]) {
+        for (const side of ["left", "right", "top", "bottom"]) {
             const rail = document.getElementById(`ad-rail-${side}`);
             if (rail) rail.hidden = true;
         }
@@ -201,7 +226,7 @@
         initialized = true;
         const mode = ["test", "live", "off"].includes(options.mode) ? options.mode : "off";
         config = { ...options, mode, ...(mode === "test" ? TEST_UNITS : {}) };
-        for (const kind of ["rewarded", "interstitial", "left", "right"]) {
+        for (const kind of ["rewarded", "interstitial", "left", "right", "top", "bottom"]) {
             // A live build must never silently fall back to somebody else's inventory.
             if (mode !== "test" && !/^\/\d+\/[A-Za-z0-9_./-]+$/.test(config[kind] || "")) config[kind] = "";
         }

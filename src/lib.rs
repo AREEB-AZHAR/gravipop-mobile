@@ -69,6 +69,8 @@ pub fn draw_txt(text: &str, x: f32, y: f32, size: f32, color: Color, font: Optio
     );
 }
 
+pub const BUTTON_LOCK_DELAY: f32 = 0.35;
+
 pub fn hit(pos: Vec2, x: f32, y: f32, w: f32, h: f32) -> bool {
     pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h
 }
@@ -282,6 +284,7 @@ pub async fn game_main() {
     let mut drop_x = VIRTUAL_WIDTH * 0.5;
     let mut is_aiming = false;
     let mut drop_cooldown = 0.0f32;
+    let mut button_lock_timer = 0.0f32;
 
     // Strategic abilities
     let mut ability_charges: u32 = 0;
@@ -340,6 +343,13 @@ pub async fn game_main() {
         let is_held = mouse_down || touch_down;
         let just_released = mouse_released || touch_ended;
 
+        // Button lock cooldown timer (prevents rapid double-clicks and ghost touch triggers)
+        if button_lock_timer > 0.0 {
+            button_lock_timer = (button_lock_timer - dt).max(0.0);
+        }
+        let can_click_ui = button_lock_timer <= 0.0;
+        let ui_tap = tap && can_click_ui;
+
         // ── Global Ticks ─────────────────────────────────────────────────────
         starfield.update(dt);
         particles.update(dt);
@@ -380,12 +390,15 @@ pub async fn game_main() {
         }
 
         // ── LOGIC ────────────────────────────────────────────────────────────
+        let state_before_frame = game_state;
         match game_state {
             // ── Main Menu ────────────────────────────────────────────────────
             GameState::MainMenu => {
                 if ad_bridge::privacy_options_required()
-                    && tap && hit(ptr, VIRTUAL_WIDTH - 210.0, 20.0, 190.0, 44.0)
+                    && ui_tap
+                    && hit(ptr, VIRTUAL_WIDTH - 210.0, 20.0, 190.0, 44.0)
                 {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     ad_bridge::show_privacy_options();
                 }
                 let cx = VIRTUAL_WIDTH * 0.5;
@@ -395,10 +408,11 @@ pub async fn game_main() {
                 let shop_y = play_y + 92.0;
                 let lb_y = shop_y + 82.0;
 
-                if (tap && hit(ptr, bx, play_y, bw, 74.0))
+                if (ui_tap && hit(ptr, bx, play_y, bw, 74.0))
                     || is_key_pressed(KeyCode::Space)
                     || is_key_pressed(KeyCode::Enter)
                 {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     ad_status.clear();
                     bodies.clear();
                     next_body_id = 1;
@@ -414,10 +428,12 @@ pub async fn game_main() {
                     is_aiming = false;
                     game_state = GameState::Playing;
                 }
-                if tap && hit(ptr, bx, shop_y, bw, 66.0) {
+                if ui_tap && hit(ptr, bx, shop_y, bw, 66.0) {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::Shop;
                 }
-                if tap && hit(ptr, bx, lb_y, bw, 62.0) {
+                if ui_tap && hit(ptr, bx, lb_y, bw, 62.0) {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     leaderboard.refresh().await;
                     leaderboard_status = leaderboard.status.clone();
                     game_state = GameState::Leaderboard;
@@ -446,10 +462,12 @@ pub async fn game_main() {
             }
 
             GameState::Leaderboard => {
-                if (tap && hit(ptr, 20.0, 20.0, 110.0, 54.0)) || is_key_pressed(KeyCode::Escape) {
+                if (ui_tap && hit(ptr, 20.0, 20.0, 110.0, 54.0)) || is_key_pressed(KeyCode::Escape) {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::MainMenu;
                 }
-                if tap && hit(ptr, VIRTUAL_WIDTH - 170.0, 20.0, 150.0, 54.0) {
+                if ui_tap && hit(ptr, VIRTUAL_WIDTH - 170.0, 20.0, 150.0, 54.0) {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     leaderboard.refresh().await;
                     leaderboard_status = leaderboard.status.clone();
                 }
@@ -458,7 +476,8 @@ pub async fn game_main() {
             // ── Galaxy Map (3 Chapter Tabs) ──────────────────────────────────
             GameState::GalaxyMap => {
                 // Back button (top left)
-                if (tap && hit(ptr, 20.0, 20.0, 90.0, 50.0)) || is_key_pressed(KeyCode::Escape) {
+                if (ui_tap && hit(ptr, 20.0, 20.0, 90.0, 50.0)) || is_key_pressed(KeyCode::Escape) {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::MainMenu;
                 }
 
@@ -471,7 +490,8 @@ pub async fn game_main() {
 
                 for c in 0..3 {
                     let tx = tab_start_x + c as f32 * (tab_w + tab_gap);
-                    if tap && hit(ptr, tx, tab_y, tab_w, tab_h) {
+                    if ui_tap && hit(ptr, tx, tab_y, tab_w, tab_h) {
+                        button_lock_timer = BUTTON_LOCK_DELAY;
                         selected_chapter = c;
                     }
                 }
@@ -500,9 +520,10 @@ pub async fn game_main() {
                     let card_h = 100.0;
 
                     if save_data.is_sector_unlocked(idx)
-                        && tap
+                        && ui_tap
                         && hit(ptr, card_x, card_y, card_w, card_h)
                     {
+                        button_lock_timer = BUTTON_LOCK_DELAY;
                         current_sector = idx;
                         let sec = &sectors[current_sector];
                         objective = ObjectiveTracker::new(sec.objective.clone());
@@ -535,10 +556,11 @@ pub async fn game_main() {
                 }
 
                 // Pause button (top right: x: 640..700, y: 20..68)
-                if (tap && hit(ptr, VIRTUAL_WIDTH - 80.0, 20.0, 60.0, 48.0))
+                if (ui_tap && hit(ptr, VIRTUAL_WIDTH - 80.0, 20.0, 60.0, 48.0))
                     || is_key_pressed(KeyCode::P)
                     || is_key_pressed(KeyCode::Escape)
                 {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::Paused;
                 }
 
@@ -553,27 +575,31 @@ pub async fn game_main() {
                 }
 
                 let mut clicked_ui = false;
-                if tap {
-                    // Strategic abilities are separate from the single random drop.
-                    let ab_y = 1140.0;
-                    let ab_w = 250.0;
-                    let ab_h = 70.0;
-                    if ability_charges > 0 {
-                        // Wave button
-                        if hit(ptr, JAR_LEFT, ab_y, ab_w, ab_h) {
-                            apply_ability(Ability::GravityWave, &mut bodies, &mut particles);
-                            audio.play_fusion_chime(4);
-                            ability_charges -= 1;
-                            clicked_ui = true;
-                        }
+                let in_pause_btn = hit(ptr, VIRTUAL_WIDTH - 80.0, 20.0, 60.0, 48.0);
+                let ab_y = 1140.0;
+                let ab_w = 250.0;
+                let ab_h = 70.0;
+                let in_wave_btn = hit(ptr, JAR_LEFT, ab_y, ab_w, ab_h);
+                let flare_x = JAR_RIGHT - ab_w;
+                let in_flare_btn = hit(ptr, flare_x, ab_y, ab_w, ab_h);
+
+                if in_pause_btn || in_wave_btn || in_flare_btn {
+                    clicked_ui = true;
+                }
+
+                if ui_tap && ability_charges > 0 {
+                    // Wave button
+                    if in_wave_btn {
+                        apply_ability(Ability::GravityWave, &mut bodies, &mut particles);
+                        audio.play_fusion_chime(4);
+                        ability_charges -= 1;
+                        button_lock_timer = BUTTON_LOCK_DELAY;
+                    } else if in_flare_btn {
                         // Flare button
-                        let flare_x = JAR_RIGHT - ab_w;
-                        if hit(ptr, flare_x, ab_y, ab_w, ab_h) {
-                            apply_ability(Ability::SolarFlare, &mut bodies, &mut particles);
-                            audio.play_fusion_chime(6);
-                            ability_charges -= 1;
-                            clicked_ui = true;
-                        }
+                        apply_ability(Ability::SolarFlare, &mut bodies, &mut particles);
+                        audio.play_fusion_chime(6);
+                        ability_charges -= 1;
+                        button_lock_timer = BUTTON_LOCK_DELAY;
                     }
                 }
 
@@ -719,9 +745,10 @@ pub async fn game_main() {
 
                 // Next Sector button
                 if btn_avail
-                    && (tap && hit(ptr, cx - 150.0, nx_y, 300.0, 66.0)
+                    && (ui_tap && hit(ptr, cx - 150.0, nx_y, 300.0, 66.0)
                         || is_key_pressed(KeyCode::Space))
                 {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     current_sector += 1;
                     let sec = &sectors[current_sector];
                     objective = ObjectiveTracker::new(sec.objective.clone());
@@ -742,7 +769,8 @@ pub async fn game_main() {
 
                 // Galaxy Map button
                 let mp_y = nx_y + 84.0;
-                if tap && hit(ptr, cx - 150.0, mp_y, 300.0, 60.0) {
+                if ui_tap && hit(ptr, cx - 150.0, mp_y, 300.0, 60.0) {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::GalaxyMap;
                 }
             }
@@ -756,14 +784,16 @@ pub async fn game_main() {
                 let ry = card_y + 242.0;
                 let qy = ry + 80.0;
 
-                if (tap && hit(ptr, bx, ry, bw, 66.0))
+                if (ui_tap && hit(ptr, bx, ry, bw, 66.0))
                     || is_key_pressed(KeyCode::P)
                     || is_key_pressed(KeyCode::Escape)
                     || is_key_pressed(KeyCode::Space)
                 {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::Playing;
                 }
-                if tap && hit(ptr, bx, qy, bw, 66.0) {
+                if ui_tap && hit(ptr, bx, qy, bw, 66.0) {
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                     if current_score > 0 {
                         danger_timer = DANGER_TIME;
                         save_data.runs_played += 1;
@@ -1467,7 +1497,7 @@ pub async fn game_main() {
                 );
                 draw_rectangle_lines(180.0, 752.0, 360.0, 54.0, 1.5, WHITE);
                 draw_centered("SAVE SCORE & RETURN HOME", cx, 787.0, 19.0, WHITE, f);
-                sector_submit = submit_hover && tap;
+                sector_submit = submit_hover && ui_tap;
 
                 // Next Sector button
                 let nx_y = VIRTUAL_HEIGHT * 0.65;
@@ -1626,7 +1656,7 @@ pub async fn game_main() {
                     &save_data.public_name,
                     &leaderboard_status,
                     ptr,
-                    tap,
+                    ui_tap,
                     f,
                 );
                 if web_submit {
@@ -1644,7 +1674,7 @@ pub async fn game_main() {
                     &save_data.unlocked_skins,
                     shop_msg.as_deref(),
                     ptr,
-                    tap,
+                    ui_tap,
                     f,
                 );
             }
@@ -1767,6 +1797,15 @@ pub async fn game_main() {
                 };
             }
             ShopAction::None => {}
+        }
+
+        // Lock all buttons if state changed or any action occurred this frame
+        if game_state != state_before_frame
+            || go_action != GameOverAction::None
+            || !matches!(shop_action, ShopAction::None)
+            || sector_submit
+        {
+            button_lock_timer = BUTTON_LOCK_DELAY;
         }
 
         // ── Blit High-Resolution Target to Physical Screen ───────────────────

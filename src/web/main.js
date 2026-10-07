@@ -48,14 +48,27 @@ function toggleFullscreen() {
   }
 }
 
+let lastWebClickTime = 0;
+function debouncedClick(fn, delay = 350) {
+  return function (e) {
+    const now = Date.now();
+    if (now - lastWebClickTime < delay) {
+      if (e?.preventDefault) e.preventDefault();
+      return;
+    }
+    lastWebClickTime = now;
+    return fn.apply(this, arguments);
+  };
+}
+
 const fullscreenBtn = document.getElementById("btn-fullscreen");
 if (fullscreenBtn) {
-  fullscreenBtn.addEventListener("click", toggleFullscreen);
+  fullscreenBtn.addEventListener("click", debouncedClick(toggleFullscreen));
 }
 
 const mobileFullscreenBtn = document.getElementById("btn-mobile-fullscreen");
 if (mobileFullscreenBtn) {
-  mobileFullscreenBtn.addEventListener("click", toggleFullscreen);
+  mobileFullscreenBtn.addEventListener("click", debouncedClick(toggleFullscreen));
 }
 
 // Focus / Maximize Game Mode (collapses side panels to maximize canvas)
@@ -81,7 +94,7 @@ function toggleFocusMode() {
 }
 
 if (focusBtn) {
-  focusBtn.addEventListener("click", toggleFocusMode);
+  focusBtn.addEventListener("click", debouncedClick(toggleFocusMode));
 }
 
 // Global Hotkeys: 'F' = Fullscreen, 'M' = Maximize / Focus
@@ -129,23 +142,29 @@ function closeDrawers() {
 }
 
 if (mobileCodexBtn) {
-  mobileCodexBtn.addEventListener("click", () => {
-    rightPanel?.classList.remove("open");
-    leftPanel?.classList.add("open");
-    drawerBackdrop?.classList.add("active");
-  });
+  mobileCodexBtn.addEventListener(
+    "click",
+    debouncedClick(() => {
+      rightPanel?.classList.remove("open");
+      leftPanel?.classList.add("open");
+      drawerBackdrop?.classList.add("active");
+    })
+  );
 }
 
 if (mobileControlsBtn) {
-  mobileControlsBtn.addEventListener("click", () => {
-    leftPanel?.classList.remove("open");
-    rightPanel?.classList.add("open");
-    drawerBackdrop?.classList.add("active");
-  });
+  mobileControlsBtn.addEventListener(
+    "click",
+    debouncedClick(() => {
+      leftPanel?.classList.remove("open");
+      rightPanel?.classList.add("open");
+      drawerBackdrop?.classList.add("active");
+    })
+  );
 }
 
-if (closeLeftBtn) closeLeftBtn.addEventListener("click", closeDrawers);
-if (closeRightBtn) closeRightBtn.addEventListener("click", closeDrawers);
-if (drawerBackdrop) drawerBackdrop.addEventListener("click", closeDrawers);
+if (closeLeftBtn) closeLeftBtn.addEventListener("click", debouncedClick(closeDrawers));
+if (closeRightBtn) closeRightBtn.addEventListener("click", debouncedClick(closeDrawers));
+if (drawerBackdrop) drawerBackdrop.addEventListener("click", debouncedClick(closeDrawers));
 
 console.log("🌌 GraviPop Web Shell Ready: Canvas 100% Scaled & Mobile Optimized");

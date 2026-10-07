@@ -6,6 +6,7 @@ A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, a
 
 ## Recent updates
 
+- **Universal Button Click Lock Delay & Debouncing.** Implemented a 350ms button lockout cooldown (`BUTTON_LOCK_DELAY = 0.35`) in the Macroquad game loop. Eliminates rapid double-click issues, ghost clicks from dual touch-started/touch-ended events, and cross-screen click bleed when navigating between screens (Main Menu, Shop, Leaderboards, Pause, and Game Over). In-game ability buttons (Gravity Wave & Solar Flare) are protected against double-charge spends, and web control buttons are debounced.
 - **Official Android App Launcher Icons.** Transcoded official launcher and adaptive/round launcher icons across `mipmap-mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, and `xxxhdpi` from `assets/gravipop_icon.jpg`, binding `@mipmap/ic_launcher` and `@mipmap/ic_launcher_round` in `android/app/src/main/AndroidManifest.xml`.
 - **Resolved NDK Deprecation Warning [CXX5106].** Cleaned deprecated `ndk.dir` from `android/local.properties`. Gradle builds now configure native compilation directly through `android.ndkVersion = '28.2.13676358'` in `android/app/build.gradle` without deprecation notices.
 - **Top & Bottom Mobile Letterbox Ads.** For modern ultra-tall mobile viewports (19.5:9 / 20:9) where the 9:16 game canvas leaves vertical letterbox margins at the top and bottom, added dynamic `#ad-rail-top` and `#ad-rail-bottom` banner ad slots in `web/gravipop_ads.js`, `index.html`, and `src/web/style.css`.

@@ -80,6 +80,10 @@ impl AudioEngine {
             play_sound_once(snd);
         }
     }
+
+    pub fn set_sound_enabled(&mut self, enabled: bool) {
+        self.sound_enabled = enabled;
+    }
 }
 
 /// Generates a valid in-memory PCM 16-bit 44100Hz mono WAV buffer of a harmonic bell chime
@@ -181,4 +185,26 @@ fn create_wav_container(samples: &[i16], sample_rate: u32) -> Vec<u8> {
     }
 
     wav
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_wav_container_format() {
+        let samples = vec![0i16; 100];
+        let wav = create_wav_container(&samples, 44100);
+        assert!(wav.starts_with(b"RIFF"));
+        assert_eq!(&wav[8..12], b"WAVE");
+        assert_eq!(&wav[12..16], b"fmt ");
+        assert_eq!(&wav[36..40], b"data");
+    }
+
+    #[test]
+    fn test_click_wav_generation() {
+        let wav = generate_click_wav(0.04);
+        assert!(!wav.is_empty());
+        assert!(wav.starts_with(b"RIFF"));
+    }
 }

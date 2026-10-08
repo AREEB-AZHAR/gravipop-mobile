@@ -81,3 +81,25 @@ pub fn draw_vector_close(cx: f32, cy: f32, size: f32, thickness: f32, color: Col
     draw_line(cx - half, cy - half, cx + half, cy + half, thickness, color);
     draw_line(cx + half, cy - half, cx - half, cy + half, thickness, color);
 }
+
+/// Draw a procedural transparent gear / settings icon centered at (cx, cy)
+pub fn draw_vector_gear(cx: f32, cy: f32, radius: f32, color: Color) {
+    let teeth = 6;
+    let step = PI / 3.0;
+    let tooth_r = radius * 0.24;
+    let hub_r = radius * 0.58;
+
+    // 6 teeth protruding along the circumference
+    for i in 0..teeth {
+        let angle = i as f32 * step;
+        let tx = cx + angle.cos() * (radius * 0.78);
+        let ty = cy + angle.sin() * (radius * 0.78);
+        draw_circle(tx, ty, tooth_r, color);
+    }
+
+    // Outer wheel ring (hollow center)
+    draw_circle_lines(cx, cy, hub_r, radius * 0.30, color);
+    // Center axle pip
+    draw_circle(cx, cy, radius * 0.16, color);
+}
+

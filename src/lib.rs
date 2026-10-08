@@ -260,7 +260,8 @@ pub async fn game_main() {
     #[cfg(target_arch = "wasm32")]
     let mut name_prompt_open = false;
     let mut physics_world = PhysicsWorld::default();
-    let audio = AudioEngine::new().await;
+    let mut audio = AudioEngine::new().await;
+    audio.set_sound_enabled(save_data.sound_enabled);
     let mut starfield = Starfield::new();
     let mut particles = ParticleEngine::new();
     let mut ads = PlatformAdService::new();
@@ -641,6 +642,7 @@ pub async fn game_main() {
                     || is_key_pressed(KeyCode::P)
                     || is_key_pressed(KeyCode::Escape)
                 {
+                    audio.play_click();
                     ui_tap = false;
                     require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
@@ -932,23 +934,37 @@ pub async fn game_main() {
             // ── Paused ───────────────────────────────────────────────────────
             GameState::Paused => {
                 let cx = VIRTUAL_WIDTH * 0.5;
-                let card_y = VIRTUAL_HEIGHT * 0.26;
-                let bw = 380.0;
+                let card_y = (VIRTUAL_HEIGHT * 0.22).round();
+                let bw = 410.0;
                 let bx = cx - bw * 0.5;
-                let ry = card_y + 242.0;
-                let qy = ry + 80.0;
+                let ry = card_y + 196.0;
+                let sy = ry + 74.0;
+                let qy = sy + 74.0;
 
-                if (ui_tap && hit(ptr, bx, ry, bw, 66.0))
+                // 1. Resume flight
+                if (ui_tap && hit(ptr, bx, ry, bw, 62.0))
                     || is_key_pressed(KeyCode::P)
                     || is_key_pressed(KeyCode::Escape)
                     || is_key_pressed(KeyCode::Space)
                 {
+                    audio.play_click();
                     ui_tap = false;
                     require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
                     game_state = GameState::Playing;
                 }
-                if ui_tap && hit(ptr, bx, qy, bw, 66.0) {
+                // 2. Settings & Audio
+                if ui_tap && hit(ptr, bx, sy, bw, 62.0) {
+                    audio.play_click();
+                    ui_tap = false;
+                    require_touch_release = true;
+                    button_lock_timer = BUTTON_LOCK_DELAY;
+                    shop_return_state = GameState::Paused;
+                    game_state = GameState::Settings;
+                }
+                // 3. End Run & Submit / Abandon
+                if ui_tap && hit(ptr, bx, qy, bw, 62.0) {
+                    audio.play_click();
                     ui_tap = false;
                     require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
@@ -1915,10 +1931,10 @@ pub async fn game_main() {
                 let cx = VIRTUAL_WIDTH * 0.5;
 
                 // Centered Frosted Modal Card
-                let card_w = 460.0;
-                let card_h = 420.0;
+                let card_w = 480.0;
+                let card_h = 440.0;
                 let card_x = cx - card_w * 0.5;
-                let card_y = VIRTUAL_HEIGHT * 0.26;
+                let card_y = (VIRTUAL_HEIGHT * 0.22).round();
 
                 // Outer soft halo
                 draw_rectangle(card_x - 3.0, card_y - 3.0, card_w + 6.0, card_h + 6.0, Color::new(0.18, 0.35, 0.70, 0.25));
@@ -1929,71 +1945,93 @@ pub async fn game_main() {
                 draw_rectangle_lines(card_x + 4.0, card_y + 4.0, card_w - 8.0, card_h - 8.0, 1.0, Color::new(0.20, 0.38, 0.75, 0.35));
 
                 // Header
-                draw_centered("MISSION PAUSED", cx, card_y + 48.0, 36.0, WHITE, f);
-                draw_centered("ORBITAL STABILIZERS ENGAGED", cx, card_y + 78.0, 16.0, Color::new(0.45, 0.85, 1.0, 0.85), f);
-                draw_line(card_x + 30.0, card_y + 96.0, card_x + card_w - 30.0, card_y + 96.0, 1.0, Color::new(0.30, 0.50, 0.85, 0.40));
+                draw_centered("MISSION PAUSED", cx, card_y + 44.0, 34.0, WHITE, f);
+                draw_centered("ORBITAL STABILIZERS ENGAGED", cx, card_y + 72.0, 15.0, Color::new(0.45, 0.85, 1.0, 0.85), f);
+                draw_line(card_x + 30.0, card_y + 88.0, card_x + card_w - 30.0, card_y + 88.0, 1.0, Color::new(0.30, 0.50, 0.85, 0.40));
 
                 // Run stats readout
-                let stat_box_w = 400.0;
-                let stat_box_h = 76.0;
+                let stat_box_w = 420.0;
+                let stat_box_h = 74.0;
                 let stat_box_x = cx - stat_box_w * 0.5;
-                let stat_box_y = card_y + 114.0;
+                let stat_box_y = card_y + 102.0;
                 draw_rectangle(stat_box_x, stat_box_y, stat_box_w, stat_box_h, Color::new(0.09, 0.12, 0.30, 0.75));
                 draw_rectangle_lines(stat_box_x, stat_box_y, stat_box_w, stat_box_h, 1.2, Color::new(0.25, 0.50, 0.85, 0.50));
 
                 let score_lbl = format!("SCORE: {}", current_score);
-                draw_centered(&score_lbl, cx, stat_box_y + 32.0, 24.0, Color::new(1.0, 0.88, 0.35, 1.0), f);
+                draw_centered(&score_lbl, cx, stat_box_y + 30.0, 22.0, Color::new(1.0, 0.88, 0.35, 1.0), f);
 
                 let dust_lbl = format!("STARDUST EARNED:  +{}", run_stardust);
-                draw_centered(&dust_lbl, cx, stat_box_y + 60.0, 18.0, Color::new(0.55, 0.90, 1.0, 0.90), f);
+                draw_centered(&dust_lbl, cx, stat_box_y + 58.0, 17.0, Color::new(0.55, 0.90, 1.0, 0.90), f);
 
                 // ── Interactive Buttons ──
-                let bw = 380.0;
+                let bw = 410.0;
                 let bx = cx - bw * 0.5;
-                let ry = card_y + 242.0;
-                let rh = hit(ptr, bx, ry, bw, 66.0);
+                let ry = card_y + 196.0;
+                let rh = hit(ptr, bx, ry, bw, 62.0);
 
                 // 1. RESUME FLIGHT (Emerald/Cyan)
                 if rh {
-                    draw_rectangle(bx - 3.0, ry - 3.0, bw + 6.0, 72.0, Color::new(0.20, 0.82, 0.50, 0.35));
+                    draw_rectangle(bx - 3.0, ry - 3.0, bw + 6.0, 68.0, Color::new(0.20, 0.82, 0.50, 0.35));
                 }
                 draw_rectangle(
                     bx,
                     ry,
                     bw,
-                    66.0,
+                    62.0,
                     if rh {
                         Color::new(0.18, 0.76, 0.46, 0.98)
                     } else {
                         Color::new(0.11, 0.60, 0.36, 0.92)
                     },
                 );
-                draw_rectangle_lines(bx, ry, bw, 66.0, 2.0, Color::new(0.45, 1.0, 0.70, 0.95));
+                draw_rectangle_lines(bx, ry, bw, 62.0, 2.0, Color::new(0.45, 1.0, 0.70, 0.95));
                 draw_line(bx + 16.0, ry + 3.0, bx + bw - 16.0, ry + 3.0, 1.5, Color::new(0.65, 1.0, 0.82, 0.65));
-                draw_vector_play(bx + 40.0, ry + 33.0, 24.0, WHITE);
-                draw_centered("RESUME FLIGHT", cx + 12.0, ry + 44.0, 26.0, WHITE, f);
+                draw_vector_play(bx + 38.0, ry + 31.0, 24.0, WHITE);
+                draw_centered("RESUME FLIGHT", cx + 12.0, ry + 42.0, 24.0, WHITE, f);
 
-                // 2. END RUN (Ruby/Coral)
-                let qy = ry + 80.0;
-                let qh = hit(ptr, bx, qy, bw, 66.0);
+                // 2. SETTINGS & AUDIO (Quantum Cyan / Deep Indigo)
+                let sy = ry + 74.0;
+                let sh = hit(ptr, bx, sy, bw, 62.0);
+                if sh {
+                    draw_rectangle(bx - 3.0, sy - 3.0, bw + 6.0, 68.0, Color::new(0.18, 0.55, 0.92, 0.35));
+                }
+                draw_rectangle(
+                    bx,
+                    sy,
+                    bw,
+                    62.0,
+                    if sh {
+                        Color::new(0.14, 0.44, 0.82, 0.98)
+                    } else {
+                        Color::new(0.08, 0.28, 0.55, 0.92)
+                    },
+                );
+                draw_rectangle_lines(bx, sy, bw, 62.0, 2.0, Color::new(0.40, 0.82, 1.0, 0.95));
+                draw_line(bx + 16.0, sy + 3.0, bx + bw - 16.0, sy + 3.0, 1.5, Color::new(0.65, 0.92, 1.0, 0.65));
+                draw_vector_gear(bx + 38.0, sy + 31.0, 14.0, WHITE);
+                draw_centered("SETTINGS & AUDIO", cx + 12.0, sy + 42.0, 23.0, WHITE, f);
+
+                // 3. END RUN (Ruby/Coral)
+                let qy = sy + 74.0;
+                let qh = hit(ptr, bx, qy, bw, 62.0);
                 if qh {
-                    draw_rectangle(bx - 3.0, qy - 3.0, bw + 6.0, 72.0, Color::new(0.85, 0.25, 0.35, 0.35));
+                    draw_rectangle(bx - 3.0, qy - 3.0, bw + 6.0, 68.0, Color::new(0.85, 0.25, 0.35, 0.35));
                 }
                 draw_rectangle(
                     bx,
                     qy,
                     bw,
-                    66.0,
+                    62.0,
                     if qh {
                         Color::new(0.78, 0.22, 0.30, 0.98)
                     } else {
                         Color::new(0.58, 0.15, 0.22, 0.92)
                     },
                 );
-                draw_rectangle_lines(bx, qy, bw, 66.0, 1.8, Color::new(1.0, 0.45, 0.55, 0.90));
+                draw_rectangle_lines(bx, qy, bw, 62.0, 1.8, Color::new(1.0, 0.45, 0.55, 0.90));
                 draw_line(bx + 16.0, qy + 3.0, bx + bw - 16.0, qy + 3.0, 1.5, Color::new(1.0, 0.70, 0.75, 0.55));
                 let end_label = if current_score > 0 { "END RUN & SUBMIT SCORE" } else { "ABANDON RUN" };
-                draw_centered(end_label, cx, qy + 44.0, 24.0, WHITE, f);
+                draw_centered(end_label, cx, qy + 42.0, 22.0, WHITE, f);
             }
 
             // ── GameOver ─────────────────────────────────────────────────────
@@ -2046,6 +2084,12 @@ pub async fn game_main() {
 
             // ── Settings ─────────────────────────────────────────────────────
             GameState::Settings => {
+                if shop_return_state == GameState::Paused {
+                    for body in &bodies {
+                        BodyRenderer::draw_body(body);
+                    }
+                    particles.draw(f);
+                }
                 let action = SettingsModal::draw(
                     save_data.resolution_profile,
                     save_data.sound_enabled,
@@ -2056,6 +2100,7 @@ pub async fn game_main() {
                 );
                 match action {
                     SettingsAction::ChangeResolution(prof) => {
+                        audio.play_click();
                         save_data.resolution_profile = prof;
                         let (rw, rh) = prof.dimensions();
                         target_w = rw;
@@ -2073,17 +2118,28 @@ pub async fn game_main() {
                         let _ = save_mgr.save(&save_data);
                     }
                     SettingsAction::ToggleSound => {
-                        save_data.sound_enabled = !save_data.sound_enabled;
+                        let was_enabled = save_data.sound_enabled;
+                        save_data.sound_enabled = !was_enabled;
+                        audio.set_sound_enabled(save_data.sound_enabled);
                         let _ = save_mgr.save(&save_data);
+                        if !was_enabled {
+                            audio.play_click();
+                        }
                     }
                     SettingsAction::ToggleHaptics => {
+                        audio.play_click();
                         save_data.haptics_enabled = !save_data.haptics_enabled;
                         let _ = save_mgr.save(&save_data);
                     }
                     SettingsAction::Close => {
+                        audio.play_click();
                         game_state = shop_return_state;
                     }
                     SettingsAction::None => {}
+                }
+                if action != SettingsAction::None {
+                    require_touch_release = true;
+                    button_lock_timer = BUTTON_LOCK_DELAY;
                 }
             }
 

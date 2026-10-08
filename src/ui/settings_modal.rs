@@ -2,7 +2,7 @@ use crate::core::config::{ResolutionProfile, VIRTUAL_HEIGHT, VIRTUAL_WIDTH};
 use crate::graphics::icons::draw_vector_close;
 use macroquad::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SettingsAction {
     None,
     ChangeResolution(ResolutionProfile),

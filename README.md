@@ -5,6 +5,13 @@ A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, a
 **[Play GraviPop](https://graviity-zeta.vercel.app/)** · [Game source](src/lib.rs) · [Android app](android/app) · [Shared leaderboard API](api/leaderboard.js)
 
 ## Recent updates
+- **Pause Menu Settings & Display Access Mid-Run.**
+  - **In-Game Settings Button:** Added a dedicated `SETTINGS & AUDIO` glassmorphic button to the Pause Menu (`GameState::Paused`), allowing players to adjust sound effects, haptic toggles, and hardware resolution profiles mid-game without forfeiting or ending active runs.
+  - **Procedural Vector Gear Icon:** Implemented `draw_vector_gear` in `src/graphics/icons.rs` to render a clean, transparent mechanical cog next to settings options, replacing any missing Unicode glyphs.
+  - **Seamless Pause Continuity:** Returning from the Settings modal via "SAVE & BACK" or the Escape key returns smoothly to the paused session, preserving all live celestial bodies, velocities, danger timers, and particles.
+- **Audio Mute State Synchronization & Total Silence When Off.**
+  - **Runtime Engine State Sync:** Fixed a bug where toggling sound off in Settings (`SOUND: MUTED`) did not silence audio because `AudioEngine` was never synchronized with `save_data.sound_enabled` on boot or upon clicking toggle.
+  - **100% Mute Enforcement:** Added `AudioEngine::set_sound_enabled()` and synchronized it both on startup and immediately upon user toggle. When sound is muted, all audio synthesizers (bell chimes, slingshot woosh, low boom, and button clicks) are immediately and completely silenced.
 - **Audio Engine Activation & Procedural Tactile Click Synthesis.**
   - **Macroquad Audio Feature Enabled:** Updated `Cargo.toml` to declare `macroquad = { version = "0.4", features = ["audio"] }`. Eliminates the missing audio feature flag that previously emitted over 3,600 `warn: macroquad's "audio" feature disabled.` console warnings and prevented all sound effects from playing.
   - **Zero-Latency Sound Synthesis:** Procedurally synthesized bell chimes, slingshot wooshes, and low boom sounds now play flawlessly on native desktop (`quad-snd` / `hound`) and web (`Web Audio API` in `mq_js_bundle.js`).

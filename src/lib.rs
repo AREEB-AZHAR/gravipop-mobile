@@ -842,8 +842,7 @@ pub async fn game_main() {
                     gravity_wave_grace_timer -= dt;
                     danger_timer = 0.0;
                 } else {
-                    let overflow_active = danger_timer > 0.0;
-                    let any_danger = bodies.iter().any(|b| b.is_overflowing(overflow_active));
+                    let any_danger = bodies.iter().any(|b| b.is_overflowing());
                     if any_danger {
                         danger_timer += dt;
                         if danger_timer >= DANGER_TIME {
@@ -862,12 +861,7 @@ pub async fn game_main() {
                             }
                         }
                     } else if danger_timer > 0.0 {
-                        // When overflow is active, dropping planets does not give recovery time
-                        // Only recover if bodies have truly cleared the upper jar threshold
-                        let near_rim = bodies.iter().any(|b| b.pos.y - b.radius < JAR_TOP_LINE + 35.0);
-                        if !near_rim {
-                            danger_timer = (danger_timer - dt * 1.5).max(0.0);
-                        }
+                        danger_timer = (danger_timer - dt * 1.5).max(0.0);
                     }
                 }
             }

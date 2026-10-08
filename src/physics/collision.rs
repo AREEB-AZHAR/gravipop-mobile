@@ -129,6 +129,8 @@ impl CollisionEngine {
                     let correction = (overlap - 0.12).max(0.0) * 0.82 / inverse_sum;
                     a.pos -= normal * (correction * inverse_a);
                     b.pos += normal * (correction * inverse_b);
+                    a.in_drop_transit = false;
+                    b.in_drop_transit = false;
 
                     let relative = b.vel - a.vel;
                     let normal_speed = relative.dot(normal);
@@ -191,6 +193,7 @@ impl CollisionEngine {
                 }
                 if body.pos.y + r > JAR_BOTTOM {
                     body.pos.y = JAR_BOTTOM - r;
+                    body.in_drop_transit = false;
                     if body.vel.y > 0.0 {
                         body.vel.y = -body.vel.y * FLOOR_RESTITUTION;
                         body.vel.x *= FLOOR_FRICTION;

@@ -5,6 +5,7 @@ pub struct AudioEngine {
     chime_sounds: Vec<Sound>,
     sling_sound: Option<Sound>,
     game_over_sound: Option<Sound>,
+    click_sound: Option<Sound>,
 }
 
 impl AudioEngine {
@@ -25,11 +26,15 @@ impl AudioEngine {
         let over_wav = generate_low_boom_wav(0.6);
         let game_over_sound = load_sound_from_bytes(&over_wav).await.ok();
 
+        let click_wav = generate_click_wav(0.04);
+        let click_sound = load_sound_from_bytes(&click_wav).await.ok();
+
         Self {
             sound_enabled: true,
             chime_sounds,
             sling_sound,
             game_over_sound,
+            click_sound,
         }
     }
 
@@ -65,6 +70,15 @@ impl AudioEngine {
         }
         let top_idx = self.chime_sounds.len() - 1;
         play_sound_once(&self.chime_sounds[top_idx]);
+    }
+
+    pub fn play_click(&self) {
+        if !self.sound_enabled {
+            return;
+        }
+        if let Some(ref snd) = self.click_sound {
+            play_sound_once(snd);
+        }
     }
 }
 
@@ -115,6 +129,21 @@ fn generate_low_boom_wav(duration_secs: f32) -> Vec<u8> {
         let env = (-t * 5.5).exp();
         let pitch = (140.0 - t * 90.0).max(35.0);
         let s = (t * pitch * 2.0 * std::f32::consts::PI).sin() * env * 0.8;
+        samples.push((s.clamp(-1.0, 1.0) * 32767.0) as i16);
+    }
+
+    create_wav_container(&samples, sample_rate)
+}
+
+fn generate_click_wav(duration_secs: f32) -> Vec<u8> {
+    let sample_rate = 44100u32;
+    let total_samples = (sample_rate as f32 * duration_secs) as usize;
+    let mut samples: Vec<i16> = Vec::with_capacity(total_samples);
+
+    for i in 0..total_samples {
+        let t = i as f32 / sample_rate as f32;
+        let env = (-t * 120.0).exp();
+        let s = (t * 960.0 * 2.0 * std::f32::consts::PI).sin() * env * 0.40;
         samples.push((s.clamp(-1.0, 1.0) * 32767.0) as i16);
     }
 

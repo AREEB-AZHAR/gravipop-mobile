@@ -14,13 +14,14 @@ pub enum SettingsAction {
 pub struct SettingsModal;
 
 fn dtx(text: &str, x: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
+    let font_size = sz.round() as u16;
     draw_text_ex(
         text,
-        x,
-        y,
+        x.round(),
+        y.round(),
         TextParams {
             font,
-            font_size: sz as u16,
+            font_size,
             color: col,
             ..Default::default()
         },
@@ -28,14 +29,15 @@ fn dtx(text: &str, x: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
 }
 
 fn dcx(text: &str, cx: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
-    let dim = measure_text(text, font, sz as u16, 1.0);
+    let font_size = sz.round() as u16;
+    let dim = measure_text(text, font, font_size, 1.0);
     draw_text_ex(
         text,
-        cx - dim.width * 0.5,
-        y,
+        (cx - dim.width * 0.5).round(),
+        y.round(),
         TextParams {
             font,
-            font_size: sz as u16,
+            font_size,
             color: col,
             ..Default::default()
         },
@@ -127,13 +129,13 @@ impl SettingsModal {
         dtx(
             "Internal buffer dynamically rescales to selected profile",
             card_x + 24.0,
-            sec_y + 22.0,
-            14.0,
-            Color::new(0.60, 0.75, 0.90, 0.75),
+            sec_y + 24.0,
+            15.0,
+            Color::new(0.70, 0.82, 0.95, 0.90),
             font,
         );
 
-        let mut row_y = sec_y + 36.0;
+        let mut row_y = sec_y + 40.0;
         for profile in ResolutionProfile::ALL {
             let is_active = profile == current_res;
             let card_w = cw - 48.0;
@@ -191,11 +193,11 @@ impl SettingsModal {
                 profile.recommendation(),
                 card_x + 72.0,
                 row_y + 54.0,
-                14.0,
+                15.0,
                 if is_active {
-                    Color::new(0.70, 0.92, 1.0, 0.95)
+                    Color::new(0.80, 0.94, 1.0, 0.98)
                 } else {
-                    Color::new(0.60, 0.70, 0.85, 0.70)
+                    Color::new(0.70, 0.80, 0.92, 0.85)
                 },
                 font,
             );

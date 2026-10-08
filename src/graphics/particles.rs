@@ -108,7 +108,7 @@ impl ParticleEngine {
         self.floating_texts.retain(|t| t.lifetime > 0.0);
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, font: Option<&Font>) {
         for p in &self.particles {
             let alpha = (p.lifetime / p.max_lifetime).clamp(0.0, 1.0);
             let mut draw_color = p.color;
@@ -121,13 +121,32 @@ impl ParticleEngine {
             let alpha = (t.lifetime / t.max_lifetime).clamp(0.0, 1.0);
             let mut col = t.color;
             col.a *= alpha;
-            let dims = measure_text(&t.text, None, t.font_size as u16, 1.0);
-            draw_text(
+            let sz = t.font_size.round() as u16;
+            let dims = measure_text(&t.text, font, sz, 1.0);
+            let px = (t.pos.x - dims.width * 0.5).round();
+            let py = t.pos.y.round();
+            // Soft drop shadow for razor-sharp readability against glowing celestial bodies
+            draw_text_ex(
                 &t.text,
-                t.pos.x - dims.width * 0.5,
-                t.pos.y,
-                t.font_size,
-                col,
+                px + 1.5,
+                py + 1.5,
+                TextParams {
+                    font,
+                    font_size: sz,
+                    color: Color::new(0.0, 0.0, 0.0, col.a * 0.75),
+                    ..Default::default()
+                },
+            );
+            draw_text_ex(
+                &t.text,
+                px,
+                py,
+                TextParams {
+                    font,
+                    font_size: sz,
+                    color: col,
+                    ..Default::default()
+                },
             );
         }
     }

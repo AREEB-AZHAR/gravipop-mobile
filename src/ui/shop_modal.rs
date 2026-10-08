@@ -14,12 +14,14 @@ pub enum ShopAction {
 pub struct ShopModal;
 
 fn dtx(text: &str, x: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
-    draw_text_ex(text, x, y, TextParams { font, font_size: sz as u16, color: col, ..Default::default() });
+    let font_size = sz.round() as u16;
+    draw_text_ex(text, x.round(), y.round(), TextParams { font, font_size, color: col, ..Default::default() });
 }
 
 fn dcx(text: &str, cx: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
-    let dim = measure_text(text, font, sz as u16, 1.0);
-    draw_text_ex(text, cx - dim.width * 0.5, y, TextParams { font, font_size: sz as u16, color: col, ..Default::default() });
+    let font_size = sz.round() as u16;
+    let dim = measure_text(text, font, font_size, 1.0);
+    draw_text_ex(text, (cx - dim.width * 0.5).round(), y.round(), TextParams { font, font_size, color: col, ..Default::default() });
 }
 
 fn inside(p: Vec2, x: f32, y: f32, w: f32, h: f32) -> bool {
@@ -97,8 +99,8 @@ impl ShopModal {
             draw_rectangle(ix, cur_y, iw, ih, Color::new(0.11, 0.09, 0.20, 0.85));
             draw_rectangle_lines(ix, cur_y, iw, ih, 1.0, Color::new(0.30, 0.40, 0.60, 0.45));
 
-            dtx(&item.title, ix + 14.0, cur_y + 26.0, 19.0, WHITE, font);
-            dtx(&item.description, ix + 14.0, cur_y + 50.0, 14.0, Color::new(0.72, 0.76, 0.86, 0.75), font);
+            dtx(&item.title, ix + 14.0, cur_y + 26.0, 20.0, WHITE, font);
+            dtx(&item.description, ix + 14.0, cur_y + 50.0, 15.0, Color::new(0.82, 0.88, 0.98, 0.95), font);
 
             let bw2 = 120.0;
             let bh = 42.0;
@@ -135,8 +137,8 @@ impl ShopModal {
             draw_rectangle(ix, cur_y, iw, ih, Color::new(0.12, 0.08, 0.20, 0.85));
             draw_rectangle_lines(ix, cur_y, iw, ih, 1.0, Color::new(0.50, 0.30, 0.70, 0.45));
 
-            dtx(&skin.title, ix + 14.0, cur_y + 26.0, 19.0, WHITE, font);
-            dtx(&skin.description, ix + 14.0, cur_y + 48.0, 14.0, Color::new(0.75, 0.70, 0.85, 0.75), font);
+            dtx(&skin.title, ix + 14.0, cur_y + 26.0, 20.0, WHITE, font);
+            dtx(&skin.description, ix + 14.0, cur_y + 48.0, 15.0, Color::new(0.82, 0.88, 0.98, 0.95), font);
 
             let bw2 = 110.0;
             let bh = 40.0;

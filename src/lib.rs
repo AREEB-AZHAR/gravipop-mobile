@@ -27,8 +27,8 @@ use macroquad::prelude::*;
 pub fn window_conf() -> Conf {
     Conf {
         window_title: "GraviPop: Stellar Conservatory".to_string(),
-        window_width: 450,
-        window_height: 800,
+        window_width: 540,
+        window_height: 960,
         window_resizable: true,
         high_dpi: true,
         ..Default::default()
@@ -40,12 +40,12 @@ pub fn window_conf() -> Conf {
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub fn draw_centered(text: &str, cx: f32, y: f32, size: f32, color: Color, font: Option<&Font>) {
-    let sz = size as u16;
+    let sz = size.round() as u16;
     let dim = measure_text(text, font, sz, 1.0);
     draw_text_ex(
         text,
-        cx - dim.width * 0.5,
-        y,
+        (cx - dim.width * 0.5).round(),
+        y.round(),
         TextParams {
             font,
             font_size: sz,
@@ -58,11 +58,11 @@ pub fn draw_centered(text: &str, cx: f32, y: f32, size: f32, color: Color, font:
 pub fn draw_txt(text: &str, x: f32, y: f32, size: f32, color: Color, font: Option<&Font>) {
     draw_text_ex(
         text,
-        x,
-        y,
+        x.round(),
+        y.round(),
         TextParams {
             font,
-            font_size: size as u16,
+            font_size: size.round() as u16,
             color,
             ..Default::default()
         },
@@ -246,13 +246,9 @@ fn apply_ability(
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub async fn game_main() {
-    // ── Font ─────────────────────────────────────────────────────────────────
-    let font_path = if cfg!(target_os = "android") {
-        "font.ttf"
-    } else {
-        "assets/font.ttf"
-    };
-    let font: Option<Font> = load_ttf_font(font_path).await.ok();
+    // ── Font (Embedded for 100% reliable instant zero-I/O loading) ───────────
+    const FONT_DATA: &[u8] = include_bytes!("../assets/font.ttf");
+    let font: Option<Font> = load_ttf_font_from_bytes(FONT_DATA).ok();
     let f: Option<&Font> = font.as_ref();
 
     // ── Core Systems ─────────────────────────────────────────────────────────
@@ -293,6 +289,7 @@ pub async fn game_main() {
     let mut game_state = GameState::MainMenu;
     let mut current_sector: usize = 0;
     let mut selected_chapter: usize = 0; // 0: Nebula Rim (1-5), 1: Frost Expanse (6-10), 2: Void (11-15)
+    let mut achievements_page: usize = 0;
     let mut bodies: Vec<CelestialBody> = Vec::new();
     let mut next_body_id = 1u64;
     let mut current_score = 0u64;
@@ -461,6 +458,7 @@ pub async fn game_main() {
                     || is_key_pressed(KeyCode::Space)
                     || is_key_pressed(KeyCode::Enter)
                 {
+                    audio.play_click();
                     ui_tap = false;
                     require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
@@ -485,6 +483,7 @@ pub async fn game_main() {
                 }
                 // Achievements button
                 if ui_tap && hit(ptr, bx, ach_y, bw, 64.0) {
+                    audio.play_click();
                     ui_tap = false;
                     require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
@@ -493,6 +492,7 @@ pub async fn game_main() {
                 }
                 // Settings button
                 if ui_tap && hit(ptr, bx, set_y, bw, 64.0) {
+                    audio.play_click();
                     ui_tap = false;
                     require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
@@ -501,6 +501,7 @@ pub async fn game_main() {
                 }
                 // Leaderboard button
                 if ui_tap && hit(ptr, bx, lb_y, bw, 62.0) {
+                    audio.play_click();
                     ui_tap = false;
                     require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
@@ -1090,8 +1091,9 @@ pub async fn game_main() {
                 let best_badge_y = card_y + 168.0;
                 draw_rectangle(best_badge_x, best_badge_y, best_badge_w, best_badge_h, Color::new(0.10, 0.13, 0.30, 0.85));
                 draw_rectangle_lines(best_badge_x, best_badge_y, best_badge_w, best_badge_h, 1.4, Color::new(1.0, 0.80, 0.28, 0.75));
-                let hi_txt = format!("🏆 ALL-TIME BEST:  {}", save_data.high_score);
-                draw_centered(&hi_txt, cx, best_badge_y + 28.0, 20.0, Color::new(1.0, 0.88, 0.35, 1.0), f);
+                draw_vector_star(best_badge_x + 28.0, best_badge_y + 21.0, 11.0, Color::new(1.0, 0.88, 0.35, 1.0));
+                let hi_txt = format!("ALL-TIME BEST:  {}", save_data.high_score);
+                draw_centered(&hi_txt, cx + 10.0, best_badge_y + 28.0, 20.0, Color::new(1.0, 0.88, 0.35, 1.0), f);
 
                 // ── Interactive Action Buttons ──
                 let bw = 360.0;
@@ -1138,7 +1140,8 @@ pub async fn game_main() {
                 );
                 draw_rectangle_lines(bx, ach_y, bw, 64.0, 1.8, Color::new(1.0, 0.88, 0.40, 0.90));
                 draw_line(bx + 16.0, ach_y + 3.0, bx + bw - 16.0, ach_y + 3.0, 1.2, Color::new(1.0, 0.92, 0.60, 0.60));
-                draw_centered("⭐  COSMIC ACHIEVEMENTS", cx, ach_y + 42.0, 22.0, WHITE, f);
+                draw_vector_star(bx + 42.0, ach_y + 32.0, 13.0, Color::new(1.0, 0.90, 0.40, 1.0));
+                draw_centered("COSMIC ACHIEVEMENTS", cx + 12.0, ach_y + 42.0, 23.0, WHITE, f);
 
                 // 3. SETTINGS & DISPLAY (Quantum Cyan)
                 let set_y = ach_y + 72.0;
@@ -1159,7 +1162,7 @@ pub async fn game_main() {
                 );
                 draw_rectangle_lines(bx, set_y, bw, 64.0, 1.8, Color::new(0.40, 0.85, 1.0, 0.90));
                 draw_line(bx + 16.0, set_y + 3.0, bx + bw - 16.0, set_y + 3.0, 1.2, Color::new(0.70, 0.92, 1.0, 0.60));
-                draw_centered("⚙️  SETTINGS & DISPLAY", cx, set_y + 42.0, 22.0, WHITE, f);
+                draw_centered("SETTINGS & DISPLAY", cx, set_y + 42.0, 23.0, WHITE, f);
 
                 // 4. GLOBAL LEADERBOARD (Sapphire Deep)
                 let lb_y = set_y + 72.0;
@@ -1180,7 +1183,7 @@ pub async fn game_main() {
                 );
                 draw_rectangle_lines(bx, lb_y, bw, 62.0, 1.8, Color::new(0.40, 0.80, 1.0, 0.85));
                 draw_line(bx + 16.0, lb_y + 3.0, bx + bw - 16.0, lb_y + 3.0, 1.2, Color::new(0.60, 0.88, 1.0, 0.55));
-                draw_centered("🏆  GLOBAL LEADERBOARD", cx, lb_y + 40.0, 22.0, WHITE, f);
+                draw_centered("GLOBAL LEADERBOARD", cx, lb_y + 40.0, 23.0, WHITE, f);
 
                 // ── Stardust Wallet Badge at Bottom ──
                 let dust_w = 300.0;
@@ -1190,7 +1193,7 @@ pub async fn game_main() {
                 draw_rectangle(dust_x, dust_y, dust_w, dust_h, Color::new(0.08, 0.10, 0.24, 0.85));
                 draw_rectangle_lines(dust_x, dust_y, dust_w, dust_h, 1.2, Color::new(0.35, 0.80, 1.0, 0.50));
                 draw_vector_gem(dust_x + 28.0, dust_y + 22.0, 22.0, Color::new(0.35, 0.85, 1.0, 1.0));
-                draw_centered(&format!("STARDUST:  {} ✨", save_data.stardust), cx + 10.0, dust_y + 29.0, 20.0, Color::new(0.85, 0.95, 1.0, 1.0), f);
+                draw_centered(&format!("STARDUST:  {}", save_data.stardust), cx + 12.0, dust_y + 29.0, 20.0, Color::new(0.85, 0.95, 1.0, 1.0), f);
 
                 // Desktop Keyboard Hint
                 draw_centered(
@@ -1501,7 +1504,7 @@ pub async fn game_main() {
                 for body in &bodies {
                     BodyRenderer::draw_body(body);
                 }
-                particles.draw();
+                particles.draw(f);
                 draw_clear_pot(danger_timer);
 
                 // A single friendly next-orb replaces the old two-choice/reserve bar.
@@ -1723,7 +1726,7 @@ pub async fn game_main() {
                 for body in &bodies {
                     BodyRenderer::draw_body(body);
                 }
-                particles.draw();
+                particles.draw(f);
 
                 draw_rectangle(
                     0.0,
@@ -1899,7 +1902,7 @@ pub async fn game_main() {
                 for body in &bodies {
                     BodyRenderer::draw_body(body);
                 }
-                particles.draw();
+                particles.draw(f);
 
                 // Frosted backdrop
                 draw_rectangle(
@@ -1926,7 +1929,7 @@ pub async fn game_main() {
                 draw_rectangle_lines(card_x + 4.0, card_y + 4.0, card_w - 8.0, card_h - 8.0, 1.0, Color::new(0.20, 0.38, 0.75, 0.35));
 
                 // Header
-                draw_centered("⏸  MISSION PAUSED", cx, card_y + 48.0, 36.0, WHITE, f);
+                draw_centered("MISSION PAUSED", cx, card_y + 48.0, 36.0, WHITE, f);
                 draw_centered("ORBITAL STABILIZERS ENGAGED", cx, card_y + 78.0, 16.0, Color::new(0.45, 0.85, 1.0, 0.85), f);
                 draw_line(card_x + 30.0, card_y + 96.0, card_x + card_w - 30.0, card_y + 96.0, 1.0, Color::new(0.30, 0.50, 0.85, 0.40));
 
@@ -1941,7 +1944,7 @@ pub async fn game_main() {
                 let score_lbl = format!("SCORE: {}", current_score);
                 draw_centered(&score_lbl, cx, stat_box_y + 32.0, 24.0, Color::new(1.0, 0.88, 0.35, 1.0), f);
 
-                let dust_lbl = format!("STARDUST EARNED:  +{} ✨", run_stardust);
+                let dust_lbl = format!("STARDUST EARNED:  +{}", run_stardust);
                 draw_centered(&dust_lbl, cx, stat_box_y + 60.0, 18.0, Color::new(0.55, 0.90, 1.0, 0.90), f);
 
                 // ── Interactive Buttons ──
@@ -1998,7 +2001,7 @@ pub async fn game_main() {
                 for body in &bodies {
                     BodyRenderer::draw_body(body);
                 }
-                particles.draw();
+                particles.draw(f);
                 go_action = GameOverModal::draw(
                     current_score,
                     save_data.high_score,
@@ -2091,6 +2094,7 @@ pub async fn game_main() {
                     current_score.max(save_data.high_score),
                     ptr,
                     ui_tap,
+                    &mut achievements_page,
                     f,
                 );
                 if matches!(action, AchievementsAction::Close) {

@@ -19,10 +19,23 @@ impl Hud {
 
         let center_txt = |text: &str, x: f32, y: f32, size: f32, color: Color| {
             let dim = measure_text(text, f, sz(size), 1.0);
+            let px = (x - dim.width * 0.5).round();
+            let py = y.round();
             draw_text_ex(
                 text,
-                x - dim.width * 0.5,
-                y,
+                px + 1.5,
+                py + 1.5,
+                TextParams {
+                    font: f,
+                    font_size: sz(size),
+                    color: Color::new(0.0, 0.0, 0.0, 0.75),
+                    ..Default::default()
+                },
+            );
+            draw_text_ex(
+                text,
+                px,
+                py,
                 TextParams {
                     font: f,
                     font_size: sz(size),
@@ -32,10 +45,23 @@ impl Hud {
             );
         };
         let left_txt = |text: &str, x: f32, y: f32, size: f32, color: Color| {
+            let px = x.round();
+            let py = y.round();
             draw_text_ex(
                 text,
-                x,
-                y,
+                px + 1.5,
+                py + 1.5,
+                TextParams {
+                    font: f,
+                    font_size: sz(size),
+                    color: Color::new(0.0, 0.0, 0.0, 0.75),
+                    ..Default::default()
+                },
+            );
+            draw_text_ex(
+                text,
+                px,
+                py,
                 TextParams {
                     font: f,
                     font_size: sz(size),

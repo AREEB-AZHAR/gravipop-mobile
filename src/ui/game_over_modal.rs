@@ -16,13 +16,14 @@ pub enum GameOverAction {
 pub struct GameOverModal;
 
 fn dtx(text: &str, x: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
+    let font_size = sz.round() as u16;
     draw_text_ex(
         text,
-        x,
-        y,
+        x.round(),
+        y.round(),
         TextParams {
             font,
-            font_size: sz as u16,
+            font_size,
             color: col,
             ..Default::default()
         },
@@ -30,14 +31,15 @@ fn dtx(text: &str, x: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
 }
 
 fn dcx(text: &str, cx: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
-    let dim = measure_text(text, font, sz as u16, 1.0);
+    let font_size = sz.round() as u16;
+    let dim = measure_text(text, font, font_size, 1.0);
     draw_text_ex(
         text,
-        cx - dim.width * 0.5,
-        y,
+        (cx - dim.width * 0.5).round(),
+        y.round(),
         TextParams {
             font,
-            font_size: sz as u16,
+            font_size,
             color: col,
             ..Default::default()
         },

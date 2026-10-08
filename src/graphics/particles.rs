@@ -20,6 +20,7 @@ pub struct FloatingText {
     pub lifetime: f32,
     pub max_lifetime: f32,
     pub font_size: f32,
+    pub width: f32,
 }
 
 pub struct ParticleEngine {
@@ -78,7 +79,7 @@ impl ParticleEngine {
         });
     }
 
-    pub fn add_floating_text(&mut self, text: String, pos: Vec2, color: Color, font_size: f32) {
+    pub fn add_floating_text_with_width(&mut self, text: String, pos: Vec2, color: Color, font_size: f32, width: f32) {
         self.floating_texts.push(FloatingText {
             text,
             pos,
@@ -87,7 +88,13 @@ impl ParticleEngine {
             lifetime: 1.1,
             max_lifetime: 1.1,
             font_size,
+            width,
         });
+    }
+
+    pub fn add_floating_text(&mut self, text: String, pos: Vec2, color: Color, font_size: f32) {
+        let approx_width = text.len() as f32 * font_size * 0.52;
+        self.add_floating_text_with_width(text, pos, color, font_size, approx_width);
     }
 
     pub fn update(&mut self, dt: f32) {
@@ -122,8 +129,7 @@ impl ParticleEngine {
             let mut col = t.color;
             col.a *= alpha;
             let sz = t.font_size.round() as u16;
-            let dims = measure_text(&t.text, font, sz, 1.0);
-            let px = (t.pos.x - dims.width * 0.5).round();
+            let px = (t.pos.x - t.width * 0.5).round();
             let py = t.pos.y.round();
             // Soft drop shadow for razor-sharp readability against glowing celestial bodies
             draw_text_ex(

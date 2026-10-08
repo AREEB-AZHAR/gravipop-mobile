@@ -1,5 +1,18 @@
 use macroquad::audio::{load_sound_from_bytes, play_sound_once, Sound};
 
+// Pre-rendered static WAV files created and saved in assets/audio/
+const CHIME_0: &[u8] = include_bytes!("../../assets/audio/chime_0.wav");
+const CHIME_1: &[u8] = include_bytes!("../../assets/audio/chime_1.wav");
+const CHIME_2: &[u8] = include_bytes!("../../assets/audio/chime_2.wav");
+const CHIME_3: &[u8] = include_bytes!("../../assets/audio/chime_3.wav");
+const CHIME_4: &[u8] = include_bytes!("../../assets/audio/chime_4.wav");
+const CHIME_5: &[u8] = include_bytes!("../../assets/audio/chime_5.wav");
+const CHIME_6: &[u8] = include_bytes!("../../assets/audio/chime_6.wav");
+const CHIME_7: &[u8] = include_bytes!("../../assets/audio/chime_7.wav");
+const SLINGSHOT: &[u8] = include_bytes!("../../assets/audio/slingshot.wav");
+const GAME_OVER: &[u8] = include_bytes!("../../assets/audio/game_over.wav");
+const CLICK: &[u8] = include_bytes!("../../assets/audio/click.wav");
+
 pub struct AudioEngine {
     pub sound_enabled: bool,
     chime_sounds: Vec<Sound>,
@@ -10,24 +23,20 @@ pub struct AudioEngine {
 
 impl AudioEngine {
     pub async fn new() -> Self {
-        let mut chime_sounds = Vec::new();
-        // Frequencies for pentatonic scale: C5, D5, E5, G5, A5, C6, D6, E6
-        let freqs = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51];
-        for &freq in &freqs {
-            let wav_bytes = generate_bell_chime_wav(freq, 0.45);
-            if let Ok(snd) = load_sound_from_bytes(&wav_bytes).await {
+        let mut chime_sounds = Vec::with_capacity(8);
+        let chime_slices = [
+            CHIME_0, CHIME_1, CHIME_2, CHIME_3,
+            CHIME_4, CHIME_5, CHIME_6, CHIME_7,
+        ];
+        for bytes in chime_slices {
+            if let Ok(snd) = load_sound_from_bytes(bytes).await {
                 chime_sounds.push(snd);
             }
         }
 
-        let sling_wav = generate_woosh_wav(0.20);
-        let sling_sound = load_sound_from_bytes(&sling_wav).await.ok();
-
-        let over_wav = generate_low_boom_wav(0.6);
-        let game_over_sound = load_sound_from_bytes(&over_wav).await.ok();
-
-        let click_wav = generate_click_wav(0.04);
-        let click_sound = load_sound_from_bytes(&click_wav).await.ok();
+        let sling_sound = load_sound_from_bytes(SLINGSHOT).await.ok();
+        let game_over_sound = load_sound_from_bytes(GAME_OVER).await.ok();
+        let click_sound = load_sound_from_bytes(CLICK).await.ok();
 
         Self {
             sound_enabled: true,
@@ -86,125 +95,22 @@ impl AudioEngine {
     }
 }
 
-/// Generates a valid in-memory PCM 16-bit 44100Hz mono WAV buffer of a harmonic bell chime
-fn generate_bell_chime_wav(freq: f32, duration_secs: f32) -> Vec<u8> {
-    let sample_rate = 44100u32;
-    let total_samples = (sample_rate as f32 * duration_secs) as usize;
-    let mut samples: Vec<i16> = Vec::with_capacity(total_samples);
-
-    for i in 0..total_samples {
-        let t = i as f32 / sample_rate as f32;
-        // Exponential bell decay envelope
-        let env = (-t * 8.0).exp();
-        // Fundamental + 1st overtone harmonic
-        let fundamental = (t * freq * 2.0 * std::f32::consts::PI).sin();
-        let overtone = (t * freq * 2.76 * 2.0 * std::f32::consts::PI).sin() * 0.35;
-        let mixed = (fundamental + overtone) * env * 0.7;
-        let sample_i16 = (mixed.clamp(-1.0, 1.0) * 32767.0) as i16;
-        samples.push(sample_i16);
-    }
-
-    create_wav_container(&samples, sample_rate)
-}
-
-fn generate_woosh_wav(duration_secs: f32) -> Vec<u8> {
-    let sample_rate = 44100u32;
-    let total_samples = (sample_rate as f32 * duration_secs) as usize;
-    let mut samples: Vec<i16> = Vec::with_capacity(total_samples);
-
-    for i in 0..total_samples {
-        let t = i as f32 / sample_rate as f32;
-        let env = (-(t - 0.05).powi(2) * 120.0).exp();
-        let pitch = 220.0 + t * 450.0;
-        let s = (t * pitch * 2.0 * std::f32::consts::PI).sin() * env * 0.5;
-        samples.push((s.clamp(-1.0, 1.0) * 32767.0) as i16);
-    }
-
-    create_wav_container(&samples, sample_rate)
-}
-
-fn generate_low_boom_wav(duration_secs: f32) -> Vec<u8> {
-    let sample_rate = 44100u32;
-    let total_samples = (sample_rate as f32 * duration_secs) as usize;
-    let mut samples: Vec<i16> = Vec::with_capacity(total_samples);
-
-    for i in 0..total_samples {
-        let t = i as f32 / sample_rate as f32;
-        let env = (-t * 5.5).exp();
-        let pitch = (140.0 - t * 90.0).max(35.0);
-        let s = (t * pitch * 2.0 * std::f32::consts::PI).sin() * env * 0.8;
-        samples.push((s.clamp(-1.0, 1.0) * 32767.0) as i16);
-    }
-
-    create_wav_container(&samples, sample_rate)
-}
-
-fn generate_click_wav(duration_secs: f32) -> Vec<u8> {
-    let sample_rate = 44100u32;
-    let total_samples = (sample_rate as f32 * duration_secs) as usize;
-    let mut samples: Vec<i16> = Vec::with_capacity(total_samples);
-
-    for i in 0..total_samples {
-        let t = i as f32 / sample_rate as f32;
-        let env = (-t * 120.0).exp();
-        let s = (t * 960.0 * 2.0 * std::f32::consts::PI).sin() * env * 0.40;
-        samples.push((s.clamp(-1.0, 1.0) * 32767.0) as i16);
-    }
-
-    create_wav_container(&samples, sample_rate)
-}
-
-fn create_wav_container(samples: &[i16], sample_rate: u32) -> Vec<u8> {
-    let num_channels = 1u16;
-    let bits_per_sample = 16u16;
-    let byte_rate = sample_rate * num_channels as u32 * (bits_per_sample as u32 / 8);
-    let block_align = num_channels * (bits_per_sample / 8);
-    let data_len = (samples.len() * 2) as u32;
-    let riff_chunk_size = 36 + data_len;
-
-    let mut wav = Vec::with_capacity(44 + samples.len() * 2);
-    // RIFF Header
-    wav.extend_from_slice(b"RIFF");
-    wav.extend_from_slice(&riff_chunk_size.to_le_bytes());
-    wav.extend_from_slice(b"WAVE");
-    // "fmt " Subchunk
-    wav.extend_from_slice(b"fmt ");
-    wav.extend_from_slice(&16u32.to_le_bytes()); // Subchunk1Size (16 for PCM)
-    wav.extend_from_slice(&1u16.to_le_bytes());  // AudioFormat (1 for PCM)
-    wav.extend_from_slice(&num_channels.to_le_bytes());
-    wav.extend_from_slice(&sample_rate.to_le_bytes());
-    wav.extend_from_slice(&byte_rate.to_le_bytes());
-    wav.extend_from_slice(&block_align.to_le_bytes());
-    wav.extend_from_slice(&bits_per_sample.to_le_bytes());
-    // "data" Subchunk
-    wav.extend_from_slice(b"data");
-    wav.extend_from_slice(&data_len.to_le_bytes());
-
-    for &sample in samples {
-        wav.extend_from_slice(&sample.to_le_bytes());
-    }
-
-    wav
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_wav_container_format() {
-        let samples = vec![0i16; 100];
-        let wav = create_wav_container(&samples, 44100);
-        assert!(wav.starts_with(b"RIFF"));
-        assert_eq!(&wav[8..12], b"WAVE");
-        assert_eq!(&wav[12..16], b"fmt ");
-        assert_eq!(&wav[36..40], b"data");
-    }
-
-    #[test]
-    fn test_click_wav_generation() {
-        let wav = generate_click_wav(0.04);
-        assert!(!wav.is_empty());
-        assert!(wav.starts_with(b"RIFF"));
+    fn test_embedded_wav_files_are_valid() {
+        let all_files = [
+            CHIME_0, CHIME_1, CHIME_2, CHIME_3,
+            CHIME_4, CHIME_5, CHIME_6, CHIME_7,
+            SLINGSHOT, GAME_OVER, CLICK,
+        ];
+        for file in all_files {
+            assert!(file.len() > 44, "Audio file is too small");
+            assert_eq!(&file[0..4], b"RIFF", "Missing RIFF header");
+            assert_eq!(&file[8..12], b"WAVE", "Missing WAVE identifier");
+            assert_eq!(&file[12..16], b"fmt ", "Missing fmt chunk");
+        }
     }
 }

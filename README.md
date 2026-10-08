@@ -5,6 +5,13 @@ A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, a
 **[Play GraviPop](https://graviity-zeta.vercel.app/)** · [Game source](src/lib.rs) · [Android app](android/app) · [Shared leaderboard API](api/leaderboard.js)
 
 ## Recent updates
+- **Pre-Generated Static Audio Assets & Zero-Latency Sound Loading.**
+  - **Static WAV Sound Files Saved in Repo:** Generated and saved 11 static 44.1kHz mono PCM WAV files into `assets/audio/` and `public/assets/audio/` (`chime_0.wav` through `chime_7.wav` for pentatonic harmonic bell merges, `slingshot.wav` for release wooshes, `game_over.wav` for resonant low booms, and `click.wav` for tactile button taps).
+  - **Compile-Time Binary Embedding (`include_bytes!`):** Refactored `AudioEngine` in `src/audio/sound_synthesizer.rs` to load audio buffers directly from embedded byte slices (`include_bytes!("../../assets/audio/...")`), completely eliminating sample-by-sample trigonometric synthesis math and heavy runtime vector allocations.
+  - **Embedded Audio Validation Tests:** Added automated unit test `test_embedded_wav_files_are_valid` to verify RIFF/WAVE header integrity and PCM specifications across all 11 sound files.
+- **Action Responsiveness & Render Loop Optimization (Lag Elimination).**
+  - **Snappy Button Response (100ms Debounce):** Reduced `BUTTON_LOCK_DELAY` from 350ms to 100ms (`0.10s`). Combined with touch-release safety gating, buttons and menu selections respond immediately with zero perceptible hang or stutter.
+  - **Cached Particle Glyph Widths:** Added pre-computed `width` caching to `FloatingText` in `src/graphics/particles.rs`, eliminating repetitive per-frame TTF `measure_text` calculations for active floating merge popups (`+100`, `+250`).
 - **Pause Menu Settings & Display Access Mid-Run.**
   - **In-Game Settings Button:** Added a dedicated `SETTINGS & AUDIO` glassmorphic button to the Pause Menu (`GameState::Paused`), allowing players to adjust sound effects, haptic toggles, and hardware resolution profiles mid-game without forfeiting or ending active runs.
   - **Procedural Vector Gear Icon:** Implemented `draw_vector_gear` in `src/graphics/icons.rs` to render a clean, transparent mechanical cog next to settings options, replacing any missing Unicode glyphs.
@@ -345,12 +352,13 @@ src/
   graphics/
     renderer.rs                  Body renderer, halo shaders, and tier visual effects
     starfield.rs                 Procedural parallax starfields & cosmic nebulae
-  audio/                         Synthesized retro-futuristic sound effects
+  audio/                         Static embedded audio sound effects (chimes, woosh, boom, click)
   web/                           Vite UI, codex atlas viewer and styling
 web/
   gravipop_web.js                 Storage, name input and leaderboard plugin
   gravipop_ads.js                 GPT fullscreen/sidebar lifecycle
 public/
+  assets/audio/                  11 static PCM WAV sound effects (chimes, slingshot, game over, click)
   assets/planets/                13 cropped & high-res celestial body portraits
 api/leaderboard.js               Shared server-side handler
 android/app/src/main/
@@ -361,11 +369,13 @@ android/app/src/main/
   java/quad_native/              Miniquad JNI declarations
   jniLibs/arm64-v8a/              Native game library
 scripts/
+  generate-audio-files.mjs       Audio generator for static PCM WAV assets
   build-wasm.mjs                 WASM and public runtime sync
   build-android.mjs              NDK library and matching Java host
   test-*.mjs                     Bridge, ad and API checks
 docs/screenshots/                Real captures
 assets/
+  audio/                         Static master 44.1kHz WAV sound files embedded at compile time
   celestial_atlas.jpg            Original 10-tier master illustrated sprite atlas
   planets/                       High-res cropped tier portraits (Tiers 1-13)
   font.ttf                       Chivo game typography

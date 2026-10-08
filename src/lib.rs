@@ -69,7 +69,7 @@ pub fn draw_txt(text: &str, x: f32, y: f32, size: f32, color: Color, font: Optio
     );
 }
 
-pub const BUTTON_LOCK_DELAY: f32 = 0.35;
+pub const BUTTON_LOCK_DELAY: f32 = 0.10;
 
 pub fn hit(pos: Vec2, x: f32, y: f32, w: f32, h: f32) -> bool {
     pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h

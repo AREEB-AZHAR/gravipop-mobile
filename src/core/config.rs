@@ -27,9 +27,59 @@ pub const COLLISION_PASSES: usize = 6;
 pub const DANGER_TIME: f32 = 5.0;
 pub const CRITICAL_TIME_LIMIT: f32 = DANGER_TIME; // alias used in hud
 
-// ── Abilities (earn 1 charge per milestone merge, max 3 active) ───────────────
+// ── Abilities (Powerups) ──────────────────────────────────────────────────────
 pub const MAX_ABILITY_CHARGES: u32 = 3;
 pub const ABILITY_EARN_TIER: usize = 3; // GasGiant or higher grants a charge
+pub const MAX_SUPER_FLARE_CHARGES: u32 = 2; // Super Solar Flare stores up to 2 usages
+pub const SUPER_FLARE_SCORE_INTERVAL: u64 = 50_000; // Earn 1 charge every 50k points
+pub const GRAVITY_WAVE_GRACE_DURATION: f32 = 3.5; // Seconds of overflow immunity when Gravity Wave is triggered
+pub const OVERFLOW_ACTIVE_DROP_GRACE: f32 = 0.05; // Transit grace when dropping during active overflow
+
+// ── Display & Resolution Profiles ─────────────────────────────────────────────
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+pub enum ResolutionProfile {
+    LowBattery, // 540x960
+    #[default]
+    Standard,   // 720x1280
+    HighDef,    // 1080x1920
+    Ultra,      // 1440x2560
+}
+
+impl ResolutionProfile {
+    pub const ALL: [ResolutionProfile; 4] = [
+        ResolutionProfile::LowBattery,
+        ResolutionProfile::Standard,
+        ResolutionProfile::HighDef,
+        ResolutionProfile::Ultra,
+    ];
+
+    pub fn dimensions(self) -> (u32, u32) {
+        match self {
+            Self::LowBattery => (540, 960),
+            Self::Standard => (720, 1280),
+            Self::HighDef => (1080, 1920),
+            Self::Ultra => (1440, 2560),
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::LowBattery => "540 x 960 (Power Saver)",
+            Self::Standard => "720 x 1280 (Standard HD)",
+            Self::HighDef => "1080 x 1920 (Full HD)",
+            Self::Ultra => "1440 x 2560 (Ultra QHD)",
+        }
+    }
+
+    pub fn recommendation(self) -> &'static str {
+        match self {
+            Self::LowBattery => "Recommended for Budget & Older Devices (Maximum FPS)",
+            Self::Standard => "Recommended for Balanced Everyday Mobile Play",
+            Self::HighDef => "Recommended for Flagship Phones, Mac & Laptops",
+            Self::Ultra => "Recommended for High-End Tablets & Desktop Monitors",
+        }
+    }
+}
 
 // ── Economy / Ads ─────────────────────────────────────────────────────────────
 pub const STARDUST_PER_FUSION_BASE: u32 = 5;
@@ -38,3 +88,4 @@ pub const CELESTIAL_PASS_PRODUCT_ID: &str = "com.gravipop.starpass";
 /// Infrequent post-session ad cadence
 pub const INTERSTITIAL_RUN_INTERVAL: u32 = 5;
 pub const FREE_REVIVES_PER_RUN: u32 = 1;
+

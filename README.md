@@ -5,6 +5,29 @@ A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, a
 **[Play GraviPop](https://graviity-zeta.vercel.app/)** · [Game source](src/lib.rs) · [Android app](android/app) · [Shared leaderboard API](api/leaderboard.js)
 
 ## Recent updates
+- **Polished Glassmorphic Powerup System & Super Solar Flare (`[3]`).**
+  - **Super Solar Flare (Tier 3 Clear):** Introduced a 3rd powerup that clears the board of micro-debris by instantly vaporizing all celestial bodies strictly below Earth level (`tier < CelestialTier::Terrestrial`, eliminating Asteroids and Moons).
+  - **Milestone Charge Accumulation:** Super Solar Flare is earned through gameplay skill by accumulating 50,000 score per charge (`SUPER_FLARE_SCORE_INTERVAL = 50,000`). It stores a maximum of 2 charges (`MAX_SUPER_FLARE_CHARGES = 2`), tracked on an independent sun-pip meter with a live fractional score gauge.
+  - **Buffed Gravity Wave (`[1]`) with Overflow Immunity:** Increased central gravitational attraction (`1.6x`) and vertical pop impulse (`-280px/s`). While active, grants 3.5s of overflow immunity (`GRAVITY_WAVE_GRACE_DURATION = 3.5`), clearing accumulated danger and skipping overflow checks during orbital compression.
+  - **Polished HUD Bar:** Redesigned powerup buttons with cosmic glassmorphism, glowing inner and outer borders, specular top-arc highlights, hotkey tags (`[1]`, `[2]`, `[3]`), and dual charge meters.
+- **Physics Overflow Bug Fixes & Drop Exploit Elimination.**
+  - **Edge-Wall Overflow Detection:** Removed the strict rest velocity constraint (`< 20px/s`) that allowed planets vibrating against jar walls (`JAR_LEFT`/`JAR_RIGHT`) to escape the danger timer. Pinned rim planets now reliably trigger danger.
+  - **0.05s Active Overflow Drop Grace:** When the overflow state is active (`danger_timer > 0.0`), newly spawned transit bodies have their settling immunity reduced from 0.85s to `0.05s` (`OVERFLOW_ACTIVE_DROP_GRACE`). Spam-clicking planets near the rim no longer delays or drains the danger countdown.
+  - **Suppressed Danger Decay During Drop Transit:** Players cannot drain accumulated danger time by dropping fresh bodies into an overflowing jar.
+- **In-Game Settings & Hardware Display Profiles.**
+  - **Dynamic Resolution Profiles:** Added customizable rendering profiles: 540p Power Saver (Mobile battery saver), 720p Standard (Recommended for mobile & low-end GPUs), 1080p Full HD (High refresh rate laptops & desktops), and 1440p Ultra (Flagship desktop displays).
+  - **Hardware Recommendation Badges:** Provides device guidance badges for low-power mobile, balanced, and high-end discrete GPUs.
+  - **Sound & Haptics Toggles:** Interactive vector toggles with persisted state in `SaveData`.
+- **Cosmic Achievements System (Up to 1,000,000 Points & 13 Tiers).**
+  - **Score Milestones:** Tracks achievements for reaching 10k, 25k, 50k, 100k, 250k, 500k, 750k, and 1,000,000 points.
+  - **Full Celestial Tier Merges:** Evaluates and unlocks badges for merging every celestial body across all 13 tiers from Asteroid up to the apex Cosmic Core.
+  - **Polished Modal Interface:** Scrollable list with cosmic glowing badges, completion percentages, unlock timestamps, and gold milestone stars.
+- **Web Codex Celestial Atlas Visuals.**
+  - **Direct Atlas Portraits:** Integrated authentic celestial illustrations for tiers 1 through 10 directly cropped from `assets/celestial_atlas.jpg`.
+  - **Apex High-Res Spheres:** Generated and integrated matching spherical game assets for Nebula (Tier 11), Quasar (Tier 12), and Cosmic Core (Tier 13).
+  - **Interactive Glow & Zoom:** Styled codex cards in `src/web/style.css` with radial gradient backdrops, tier-colored glowing borders, and smooth hover micro-animations.
+- **Shop Button Migration.**
+  - Removed the shop button from the Main Menu and Game Over modal per design specifications, while keeping all underlying shop data structures, catalog items, and billing integrations completely intact in the codebase.
 - **Case-Sensitive Global Leaderboard Names.**
   - **Preserves Exact Casing:** Player callsigns with different capitalization (e.g. `areeb`, `Areeb`, and `AREEB`) are treated and stored as distinct identities on the global shared leaderboard.
   - **Exact String Indexing:** Removed `.toLowerCase()` key flattening in `api/leaderboard.js`. Both deduplication maps, personal best comparison lookups, and score deletion endpoints now match exact character sequences.
@@ -230,10 +253,31 @@ Desktop saves to gravipop_save.json in the working directory. Android saves in i
 | Drop | Release | Space / Down |
 | Gravity Wave | Tap button | 1 |
 | Solar Flare | Tap button | 2 |
+| Super Solar Flare | Tap button | 3 |
+| Settings & Display | Tap button / Settings tab | Escape / S |
+| Achievements | Tap Achievements button | A |
 | Pause | Tap pause icon | P / Escape |
 | Web fullscreen | Fullscreen button | F |
 | Web focus mode | Focus button | M |
 | Save finished score | Save Score & Return Home | Enter |
+
+## Screenshots & Gallery
+
+| Desktop with Google test ads | Mobile layout |
+| :---: | :---: |
+| ![Google test ads in the empty game margins](docs/screenshots/google_test_ads_verified.jpg) | ![Mobile title screen](docs/screenshots/mobile_title_verified.png) |
+
+| Gameplay | Shared leaderboard |
+| :---: | :---: |
+| ![Merge gameplay](docs/screenshots/vercel_gameplay_verified.png) | ![Leaderboard](docs/screenshots/leaderboard_screen_verified.png) |
+
+> [!NOTE]
+> **Recommended Community Screenshots:**
+> To showcase the latest release, please capture and contribute the following screens to `docs/screenshots/`:
+> 1. **Settings Modal (`settings_screen.png`):** Open *SETTINGS & DISPLAY* from the main menu showing the resolution profile choices (540p, 720p, 1080p, 1440p) and hardware badges.
+> 2. **Cosmic Achievements Modal (`achievements_screen.png`):** Open *ACHIEVEMENTS* from the main menu displaying milestone badges up to 1,000,000 pts and completed tier fusions.
+> 3. **HUD Powerups in Gameplay (`powerups_hud.png`):** A gameplay screen showing the polished glassmorphic 3-button powerup bar with the Super Solar Flare sun-pip gauge.
+> 4. **Celestial Codex (`web_codex_atlas.png`):** The Web Codex tab showing the newly integrated portraits for all 13 celestial bodies.
 
 ## Validation
 
@@ -243,7 +287,7 @@ npm run test:web
 cargo test --lib deployed_global_leaderboard_is_readable_from_native_builds -- --ignored
 ~~~
 
-The Rust suite has **28 passing tests** plus one optional production-HTTPS check. It covers physics, landing without scoring, drop unlocks/rarity, request-specific ad rewards, and the native API contract. Web checks cover single save events, ad lifecycle and placement, and leaderboard request ordering/offline handling.
+The Rust suite has **30 unit tests** (29 passing, 1 optional production-HTTPS check). It covers physics, landing without scoring, drop unlocks/rarity, request-specific ad rewards, and the native API contract. Web checks cover single save events, ad lifecycle and placement, and leaderboard request ordering/offline handling.
 
 The optional HTTPS check reads the production board without creating a score. Release WASM, Windows desktop, native arm64, and the Gradle debug APK are build-checked. Browser test creatives and the phone layout are visually verified. No Android device is currently attached for on-device ad testing.
 
@@ -253,31 +297,42 @@ Real Google web inventory was also checked manually: an early close returned no 
 
 ~~~text
 src/
-  lib.rs                         Game loop, result screens and merge events
+  lib.rs                         Game loop, HUD powerups, modal orchestration and merge events
   core/
+    achievements.rs              Milestone tracking (10k-1M pts, all 13 tiers)
+    config.rs                    Resolution profiles, hardware hints, danger timers & powerup constants
+    game_state.rs                State machine (MainMenu, Playing, Settings, Achievements, GameOver)
     leaderboard.rs               Shared client / polling
     leaderboard_native.rs        Native HTTPS background worker
-    save_system.rs               Versioned progress
+    save_system.rs               Versioned progress (achievements, settings, high scores)
     sector.rs                    Campaign objectives
     web_bridge.rs                Miniquad web FFI
   physics/
-    celestial_tier.rs            13-tier merge chain
+    body.rs                      Celestial body dynamics, 0.05s overflow grace & rest detection
+    celestial_tier.rs            13-tier merge chain (Asteroid through Cosmic Core)
     drop_pool.rs                 Per-run merge unlocks / weighted drops
-    collision.rs                 Physics and merge-only score events
+    collision.rs                 Physics, boundary confinement and merge-only score events
   monetization/
     ads.rs                       Request-specific ad state
     ad_bridge.rs                 Web FFI / Android JNI
-    billing.rs                   Existing mock purchase flow
+    billing.rs                   Cosmic shop & item catalog logic
   ui/
-    game_over_modal.rs           Centered results and unified save
+    achievements_modal.rs        Scrollable cosmic milestone list and badge rendering
+    settings_modal.rs            Display resolution profiles, hardware recommendations, audio toggles
+    game_over_modal.rs           Centered results, achievements shortcut and unified save
+    shop_modal.rs                Cosmic store modal (preserved in engine)
+    hud.rs                       Aim line, danger countdown alert badge, stats
     ad_overlay.rs                Paused backdrop during provider ads
-  graphics/                      Shapes, particles and starfield
-  audio/                         Synthesized sounds
-  web/                           Vite UI, codex and styles
+  graphics/
+    renderer.rs                  Body renderer, halo shaders, and tier visual effects
+    starfield.rs                 Procedural parallax starfields & cosmic nebulae
+  audio/                         Synthesized retro-futuristic sound effects
+  web/                           Vite UI, codex atlas viewer and styling
 web/
   gravipop_web.js                 Storage, name input and leaderboard plugin
   gravipop_ads.js                 GPT fullscreen/sidebar lifecycle
-public/                          Committed WASM and runtime mirrors
+public/
+  assets/planets/                13 cropped & high-res celestial body portraits
 api/leaderboard.js               Shared server-side handler
 android/app/src/main/
   java/com/gravipop/celestialmerge/
@@ -291,7 +346,10 @@ scripts/
   build-android.mjs              NDK library and matching Java host
   test-*.mjs                     Bridge, ad and API checks
 docs/screenshots/                Real captures
-assets/                          Font and game art
+assets/
+  celestial_atlas.jpg            Original 10-tier master illustrated sprite atlas
+  planets/                       High-res cropped tier portraits (Tiers 1-13)
+  font.ttf                       Chivo game typography
 Cargo.lock                       Reproducible Rust dependency versions
 vercel.json                      Vite deployment and WASM headers
 ~~~

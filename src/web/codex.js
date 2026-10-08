@@ -2,6 +2,7 @@ export const CELESTIAL_TIERS = [
   {
     tier: 1,
     name: "Asteroid",
+    image: "/assets/planets/tier_1.jpg",
     color: "#78716c",
     glow: "#a8a29e",
     points: "5 pts",
@@ -11,6 +12,7 @@ export const CELESTIAL_TIERS = [
   {
     tier: 2,
     name: "Moon",
+    image: "/assets/planets/tier_2.jpg",
     color: "#94a3b8",
     glow: "#cbd5e1",
     points: "15 pts",
@@ -20,6 +22,7 @@ export const CELESTIAL_TIERS = [
   {
     tier: 3,
     name: "Terrestrial (Earth)",
+    image: "/assets/planets/tier_3.jpg",
     color: "#38bdf8",
     glow: "#0284c7",
     points: "40 pts",
@@ -29,6 +32,7 @@ export const CELESTIAL_TIERS = [
   {
     tier: 4,
     name: "Gas Giant (Jupiter)",
+    image: "/assets/planets/tier_4.jpg",
     color: "#fb923c",
     glow: "#ea580c",
     points: "100 pts",
@@ -38,6 +42,7 @@ export const CELESTIAL_TIERS = [
   {
     tier: 5,
     name: "Ringed Giant (Saturn)",
+    image: "/assets/planets/tier_5.jpg",
     color: "#facc15",
     glow: "#ca8a04",
     points: "250 pts",
@@ -47,6 +52,7 @@ export const CELESTIAL_TIERS = [
   {
     tier: 6,
     name: "Ice Giant",
+    image: "/assets/planets/tier_6.jpg",
     color: "#2dd4bf",
     glow: "#0d9488",
     points: "600 pts",
@@ -56,6 +62,7 @@ export const CELESTIAL_TIERS = [
   {
     tier: 7,
     name: "Red Dwarf",
+    image: "/assets/planets/tier_7.jpg",
     color: "#f87171",
     glow: "#dc2626",
     points: "1,500 pts",
@@ -65,6 +72,7 @@ export const CELESTIAL_TIERS = [
   {
     tier: 8,
     name: "Blue Supergiant",
+    image: "/assets/planets/tier_8.jpg",
     color: "#60a5fa",
     glow: "#2563eb",
     points: "4,000 pts",
@@ -74,6 +82,7 @@ export const CELESTIAL_TIERS = [
   {
     tier: 9,
     name: "Pulsar (Magnetar)",
+    image: "/assets/planets/tier_9.jpg",
     color: "#c084fc",
     glow: "#9333ea",
     points: "10,000 pts",
@@ -83,19 +92,41 @@ export const CELESTIAL_TIERS = [
   {
     tier: 10,
     name: "Singularity",
+    image: "/assets/planets/tier_10.jpg",
     color: "#a855f7",
     glow: "#ec4899",
     points: "30,000 pts",
     badge: "Tier 10",
     desc: "Event horizon encircled by Einstein photon ring & violet Doppler disk.",
   },
-  { tier: 11, name: "Nebula", color: "#b840a6", glow: "#f472b6",
-    points: "60,000 pts", badge: "Tier 11",
-    desc: "Rosette cloud surrounding a stellar nursery. Rare drops unlock after merging a Cosmic Core." },
-  { tier: 12, name: "Quasar", color: "#33d9d9", glow: "#a5f3fc",
-    points: "120,000 pts", badge: "Tier 12",
-    desc: "Rotating diamond and luminous turquoise core. Formed only by merging two Nebulas." },
-  { tier: 13, name: "Cosmic Core", color: "#ffb333", glow: "#fef08a",
-    points: "250,000 pts", badge: "Apex",
-    desc: "Golden hexagonal shell and six-point star. Formed only by merging two Quasars." },
+  {
+    tier: 11,
+    name: "Nebula",
+    image: "/assets/planets/tier_11.jpg",
+    color: "#b840a6",
+    glow: "#f472b6",
+    points: "60,000 pts",
+    badge: "Tier 11",
+    desc: "Rosette cloud surrounding a stellar nursery. Rare drops unlock after merging a Cosmic Core.",
+  },
+  {
+    tier: 12,
+    name: "Quasar",
+    image: "/assets/planets/tier_12.jpg",
+    color: "#33d9d9",
+    glow: "#a5f3fc",
+    points: "120,000 pts",
+    badge: "Tier 12",
+    desc: "Rotating diamond and luminous turquoise core. Formed only by merging two Nebulas.",
+  },
+  {
+    tier: 13,
+    name: "Cosmic Core",
+    image: "/assets/planets/tier_13.jpg",
+    color: "#ffb333",
+    glow: "#fef08a",
+    points: "250,000 pts",
+    badge: "Apex",
+    desc: "Golden hexagonal shell and six-point star. Formed only by merging two Quasars.",
+  },
 ];

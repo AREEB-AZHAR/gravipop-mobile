@@ -8,7 +8,8 @@ pub enum GameOverAction {
     WatchAdRevive,
     WatchAdDoubleStardust,
     Restart,
-    OpenShop,
+    OpenShop, // retained in code
+    OpenAchievements,
     SaveScore,
 }
 
@@ -352,7 +353,7 @@ impl GameOverModal {
         }
         by += btn_h + 14.0;
 
-        // Button 4: Shop
+        // Button 4: Achievements (Shop button removed per request, code retained)
         let hov4 = inside(mouse_pos, bx, by, bw, btn_h);
         draw_rectangle(
             bx,
@@ -360,15 +361,15 @@ impl GameOverModal {
             bw,
             btn_h,
             if hov4 {
-                Color::new(0.62, 0.28, 0.80, 1.0)
+                Color::new(0.85, 0.65, 0.20, 1.0)
             } else {
-                Color::new(0.46, 0.18, 0.62, 1.0)
+                Color::new(0.65, 0.45, 0.12, 1.0)
             },
         );
         draw_rectangle_lines(bx, by, bw, btn_h, 1.8, WHITE);
-        dcx("COSMIC SHOP", cx, by + 40.0, 24.0, WHITE, font);
+        dcx("ACHIEVEMENTS", cx, by + 40.0, 24.0, WHITE, font);
         if hov4 && mouse_clicked {
-            action = GameOverAction::OpenShop;
+            action = GameOverAction::OpenAchievements;
         }
 
         if !ad_status.is_empty() {

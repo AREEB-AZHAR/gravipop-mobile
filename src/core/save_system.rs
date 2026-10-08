@@ -32,11 +32,19 @@ pub struct SaveData {
     pub equipped_skin: String,
     pub unlocked_skins: Vec<String>,
 
-    // ── Settings ────────────────────────────────────────────────────────────
+    // ── Settings & Resolution ───────────────────────────────────────────────
     #[serde(default = "default_true")]
     pub sound_enabled: bool,
     #[serde(default = "default_true")]
     pub haptics_enabled: bool,
+    #[serde(default)]
+    pub resolution_profile: crate::core::config::ResolutionProfile,
+
+    // ── Achievements ────────────────────────────────────────────────────────
+    #[serde(default)]
+    pub unlocked_achievements: Vec<String>,
+    #[serde(default)]
+    pub merged_tiers: Vec<usize>,
 }
 
 fn default_true() -> bool {
@@ -58,6 +66,9 @@ impl Default for SaveData {
             unlocked_skins: vec!["Cosmic Neon".to_string()],
             sound_enabled: true,
             haptics_enabled: true,
+            resolution_profile: crate::core::config::ResolutionProfile::Standard,
+            unlocked_achievements: Vec::new(),
+            merged_tiers: Vec::new(),
         }
     }
 }

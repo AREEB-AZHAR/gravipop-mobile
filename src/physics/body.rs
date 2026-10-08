@@ -51,11 +51,25 @@ impl CelestialBody {
 
     /// True when this body has essentially come to rest.
     pub fn is_settled(&self) -> bool {
-        self.age > 0.4 && self.vel.length_squared() < 400.0 // ~20 px/s
+        self.age > 0.3 && self.vel.length_squared() < 2500.0 // ~50 px/s
     }
 
-    /// True when the body (settled) is above the game-over danger line.
+    /// True when the body is overflowing above the game-over danger line.
+    /// When `overflow_active` is true, newly dropped planets only have 0.05s of grace.
+    /// Settled and edge-vibrating bodies continuously register as overflowing.
+    pub fn is_overflowing(&self, overflow_active: bool) -> bool {
+        let grace = if overflow_active {
+            OVERFLOW_ACTIVE_DROP_GRACE
+        } else {
+            0.35
+        };
+        let is_falling_drop = self.age < grace && self.vel.y > 30.0;
+        !is_falling_drop && (self.pos.y - self.radius < JAR_TOP_LINE)
+    }
+
+    /// Backward-compatible alias checking overflow with standard transit buffer.
     pub fn above_danger_line(&self) -> bool {
-        self.is_settled() && self.pos.y - self.radius < JAR_TOP_LINE
+        self.is_overflowing(false)
     }
 }
+

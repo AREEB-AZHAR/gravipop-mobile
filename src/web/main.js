@@ -14,18 +14,23 @@ window.GravipopAds?.configure({
   right: import.meta.env.VITE_GOOGLE_AD_SIDEBAR_RIGHT_UNIT || "",
 });
 
-// Populate Codex list
+// Populate Codex list with photos
 const codexContainer = document.getElementById("codex-list");
 if (codexContainer) {
   codexContainer.innerHTML = CELESTIAL_TIERS.map(
     (tier) => `
     <div class="codex-card" style="--tier-glow: ${tier.glow}">
-      <div class="card-top">
-        <span class="tier-dot" style="background-color: ${tier.color}; box-shadow: 0 0 8px ${tier.glow};"></span>
-        <span class="tier-name">${tier.name}</span>
-        <span class="tier-pts" title="Points are awarded for merging, never for dropping a planet">${tier.points}</span>
+      <div class="card-thumb-wrap">
+        <img src="${tier.image || '/assets/planets/tier_' + tier.tier + '.jpg'}" alt="${tier.name}" class="planet-thumb" loading="lazy" />
       </div>
-      <p class="card-desc">${tier.desc}</p>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="tier-dot" style="background-color: ${tier.color}; box-shadow: 0 0 8px ${tier.glow};"></span>
+          <span class="tier-name">${tier.name}</span>
+          <span class="tier-pts" title="Points are awarded for merging, never for dropping a planet">${tier.points}</span>
+        </div>
+        <p class="card-desc">${tier.desc}</p>
+      </div>
     </div>
   `
   ).join("");

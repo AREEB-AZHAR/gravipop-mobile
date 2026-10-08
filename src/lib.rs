@@ -159,8 +159,9 @@ fn sync_web_name_input(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Ability {
-    GravityWave, // Nudge all bodies toward jar centre & upwards to unblock merges
-    SolarFlare,  // Vaporise the 2 highest clutter bodies
+    GravityWave,     // Nudge all bodies toward jar centre & upwards with high bounce
+    SolarFlare,      // Vaporise the 2 highest clutter bodies
+    SuperSolarFlare, // Vaporise all planets strictly below Earth level (Asteroid, Moon)
 }
 
 impl Ability {
@@ -168,12 +169,14 @@ impl Ability {
         match self {
             Self::GravityWave => "GRAVITY WAVE",
             Self::SolarFlare => "SOLAR FLARE",
+            Self::SuperSolarFlare => "SUPER SOLAR FLARE",
         }
     }
     pub fn description(self) -> &'static str {
         match self {
-            Self::GravityWave => "Pull & lift bodies to center",
+            Self::GravityWave => "Pull & bounce bodies to center",
             Self::SolarFlare => "Vaporise top 2 clutter bodies",
+            Self::SuperSolarFlare => "Vaporise all bodies below Earth",
         }
     }
 }
@@ -188,9 +191,9 @@ fn apply_ability(
             let cx = (JAR_LEFT + JAR_RIGHT) * 0.5;
             for b in bodies.iter_mut() {
                 let dx = cx - b.pos.x;
-                b.vel.x += dx * 0.40;
-                b.vel.y -= 160.0; // gentle upward impulse to allow trapped bodies to merge
-                particles.spawn_trail(b.pos, Color::new(0.35, 0.75, 1.0, 0.8));
+                b.vel.x += dx * 1.60; // Extra power to pull bodies into center
+                b.vel.y = b.vel.y.min(-200.0) - 280.0; // High cosmic upward bounce
+                particles.spawn_trail(b.pos, Color::new(0.35, 0.85, 1.0, 0.9));
             }
         }
         Ability::SolarFlare => {
@@ -209,6 +212,31 @@ fn apply_ability(
                 }
             }
             bodies.retain(|b| !to_remove.contains(&b.id));
+        }
+        Ability::SuperSolarFlare => {
+            // Vaporise all planets strictly below Earth level (Asteroid, Moon)
+            let mut removed_count = 0;
+            for b in bodies.iter() {
+                if b.tier < CelestialTier::Terrestrial {
+                    particles.spawn_fusion_burst(b.pos, Color::new(1.0, 0.85, 0.25, 1.0), 8);
+                    particles.add_floating_text(
+                        "VAPORIZED".to_string(),
+                        b.pos,
+                        Color::new(1.0, 0.90, 0.35, 1.0),
+                        24.0,
+                    );
+                    removed_count += 1;
+                }
+            }
+            bodies.retain(|b| b.tier >= CelestialTier::Terrestrial);
+            if removed_count > 0 {
+                particles.add_floating_text(
+                    format!("SUPER FLARE CLEARED {} PLANETS!", removed_count),
+                    Vec2::new((JAR_LEFT + JAR_RIGHT) * 0.5, 420.0),
+                    Color::new(1.0, 0.88, 0.30, 1.0),
+                    34.0,
+                );
+            }
         }
     }
 }
@@ -246,9 +274,10 @@ pub async fn game_main() {
     let catalog = EconomyCatalog::new();
     let sectors = all_sectors();
 
-    // ── High-Resolution Render Target (Dynamically matched to native screen buffer)
-    let mut target_w = VIRTUAL_WIDTH as u32;
-    let mut target_h = VIRTUAL_HEIGHT as u32;
+    // ── High-Resolution Render Target (Configured by ResolutionProfile) ─────────
+    let (init_w, init_h) = save_data.resolution_profile.dimensions();
+    let mut target_w = init_w;
+    let mut target_h = init_h;
     let mut vt = render_target(target_w, target_h);
     vt.texture.set_filter(FilterMode::Linear);
     let mut vcam = Camera2D {
@@ -288,9 +317,13 @@ pub async fn game_main() {
     let mut require_touch_release = false;
     let mut shop_return_state = GameState::MainMenu;
 
-    // Strategic abilities
+    // Strategic abilities & Powerups
     let mut ability_charges: u32 = 0;
     let mut ability_flash: f32 = 0.0;
+    let mut super_flare_charges: u32 = 0;
+    let mut super_flare_milestone: u64 = 0;
+    let mut gravity_wave_grace_timer: f32 = 0.0f32;
+
 
     // Sector completion celebration
     let mut sector_complete_timer = 0.0f32;
@@ -419,9 +452,10 @@ pub async fn game_main() {
                 let cx = VIRTUAL_WIDTH * 0.5;
                 let bw = 360.0;
                 let bx = cx - bw * 0.5;
-                let play_y = VIRTUAL_HEIGHT * 0.52;
-                let shop_y = play_y + 92.0;
-                let lb_y = shop_y + 82.0;
+                let play_y = VIRTUAL_HEIGHT * 0.49;
+                let ach_y = play_y + 82.0;
+                let set_y = ach_y + 72.0;
+                let lb_y = set_y + 72.0;
 
                 if (ui_tap && hit(ptr, bx, play_y, bw, 74.0))
                     || is_key_pressed(KeyCode::Space)
@@ -440,19 +474,32 @@ pub async fn game_main() {
                     stardust_doubled = false;
                     danger_timer = 0.0;
                     ability_charges = 0;
+                    super_flare_charges = 0;
+                    super_flare_milestone = 0;
+                    gravity_wave_grace_timer = 0.0;
                     drop_cooldown = 0.0;
                     drop_pool = DropPool::default();
                     next_tier = drop_pool.random_tier();
                     is_aiming = false;
                     game_state = GameState::Playing;
                 }
-                if ui_tap && hit(ptr, bx, shop_y, bw, 66.0) {
+                // Achievements button
+                if ui_tap && hit(ptr, bx, ach_y, bw, 64.0) {
                     ui_tap = false;
                     require_touch_release = true;
                     button_lock_timer = BUTTON_LOCK_DELAY;
                     shop_return_state = GameState::MainMenu;
-                    game_state = GameState::Shop;
+                    game_state = GameState::Achievements;
                 }
+                // Settings button
+                if ui_tap && hit(ptr, bx, set_y, bw, 64.0) {
+                    ui_tap = false;
+                    require_touch_release = true;
+                    button_lock_timer = BUTTON_LOCK_DELAY;
+                    shop_return_state = GameState::MainMenu;
+                    game_state = GameState::Settings;
+                }
+                // Leaderboard button
                 if ui_tap && hit(ptr, bx, lb_y, bw, 62.0) {
                     ui_tap = false;
                     require_touch_release = true;
@@ -611,45 +658,61 @@ pub async fn game_main() {
 
                 let mut clicked_ui = false;
                 let in_pause_btn = hit(ptr, VIRTUAL_WIDTH - 80.0, 20.0, 60.0, 48.0);
-                let ab_y = 1140.0;
-                let ab_w = 250.0;
-                let ab_h = 70.0;
+                let ab_y = 1136.0;
+                let ab_w = 170.0;
+                let ab_h = 66.0;
                 let in_wave_btn = hit(ptr, JAR_LEFT, ab_y, ab_w, ab_h);
-                let flare_x = JAR_RIGHT - ab_w;
+                let flare_x = JAR_LEFT + ab_w + 15.0; // 275.0
                 let in_flare_btn = hit(ptr, flare_x, ab_y, ab_w, ab_h);
+                let super_x = JAR_LEFT + (ab_w + 15.0) * 2.0; // 460.0
+                let in_super_btn = hit(ptr, super_x, ab_y, ab_w, ab_h);
 
-                if in_pause_btn || in_wave_btn || in_flare_btn {
+                if in_pause_btn || in_wave_btn || in_flare_btn || in_super_btn {
                     clicked_ui = true;
                 }
 
-                if ui_tap && ability_charges > 0 {
-                    // Wave button
-                    if in_wave_btn {
+                if ui_tap {
+                    // Powerup 1: Gravity Wave (High bounce, center pull, overflow immunity)
+                    if in_wave_btn && ability_charges > 0 {
                         ui_tap = false;
                         apply_ability(Ability::GravityWave, &mut bodies, &mut particles);
+                        danger_timer = 0.0;
+                        gravity_wave_grace_timer = GRAVITY_WAVE_GRACE_DURATION;
                         audio.play_fusion_chime(4);
                         ability_charges -= 1;
                         button_lock_timer = BUTTON_LOCK_DELAY;
-                    } else if in_flare_btn {
-                        // Flare button
+                    } else if in_flare_btn && ability_charges > 0 {
+                        // Powerup 2: Solar Flare (Vaporise top 2 clutter bodies)
                         ui_tap = false;
                         apply_ability(Ability::SolarFlare, &mut bodies, &mut particles);
                         audio.play_fusion_chime(6);
                         ability_charges -= 1;
+                        button_lock_timer = BUTTON_LOCK_DELAY;
+                    } else if in_super_btn && super_flare_charges > 0 {
+                        // Powerup 3: SUPER SOLAR FLARE (Vaporise all bodies below Earth)
+                        ui_tap = false;
+                        apply_ability(Ability::SuperSolarFlare, &mut bodies, &mut particles);
+                        audio.play_fusion_chime(8);
+                        super_flare_charges -= 1;
                         button_lock_timer = BUTTON_LOCK_DELAY;
                     }
                 }
 
-                if ability_charges > 0 {
-                    if is_key_pressed(KeyCode::Key1) {
-                        apply_ability(Ability::GravityWave, &mut bodies, &mut particles);
-                        audio.play_fusion_chime(4);
-                        ability_charges -= 1;
-                    } else if is_key_pressed(KeyCode::Key2) {
-                        apply_ability(Ability::SolarFlare, &mut bodies, &mut particles);
-                        audio.play_fusion_chime(6);
-                        ability_charges -= 1;
-                    }
+                // Keyboard Hotkeys: 1, 2, 3
+                if is_key_pressed(KeyCode::Key1) && ability_charges > 0 {
+                    apply_ability(Ability::GravityWave, &mut bodies, &mut particles);
+                    danger_timer = 0.0;
+                    gravity_wave_grace_timer = GRAVITY_WAVE_GRACE_DURATION;
+                    audio.play_fusion_chime(4);
+                    ability_charges -= 1;
+                } else if is_key_pressed(KeyCode::Key2) && ability_charges > 0 {
+                    apply_ability(Ability::SolarFlare, &mut bodies, &mut particles);
+                    audio.play_fusion_chime(6);
+                    ability_charges -= 1;
+                } else if is_key_pressed(KeyCode::Key3) && super_flare_charges > 0 {
+                    apply_ability(Ability::SuperSolarFlare, &mut bodies, &mut particles);
+                    audio.play_fusion_chime(8);
+                    super_flare_charges -= 1;
                 }
 
                 // Touch / Mouse Aiming inside Jar Area
@@ -694,12 +757,50 @@ pub async fn game_main() {
                     current_score += fus.score_awarded;
                     run_stardust += fus.stardust_awarded as u64;
 
-                    // Milestone merges grant Ability Charges
+                    // Record merged tier for achievements
+                    let tier_idx = fus.new_tier as usize;
+                    if !save_data.merged_tiers.contains(&tier_idx) {
+                        save_data.merged_tiers.push(tier_idx);
+                    }
+
+                    // Milestone merges grant standard Ability Charges
                     if (fus.new_tier as usize) >= ABILITY_EARN_TIER
                         && ability_charges < MAX_ABILITY_CHARGES
                     {
                         ability_charges += 1;
                         ability_flash = 0.9;
+                    }
+
+                    // Super Solar Flare Charge: Earned every 50,000 score achieved (max 2 charges)
+                    while current_score >= super_flare_milestone + SUPER_FLARE_SCORE_INTERVAL {
+                        super_flare_milestone += SUPER_FLARE_SCORE_INTERVAL;
+                        if super_flare_charges < MAX_SUPER_FLARE_CHARGES {
+                            super_flare_charges += 1;
+                            particles.add_floating_text(
+                                "SUPER SOLAR FLARE READY!".to_string(),
+                                Vec2::new(VIRTUAL_WIDTH * 0.5, 480.0),
+                                Color::new(1.0, 0.85, 0.25, 1.0),
+                                32.0,
+                            );
+                            audio.play_fusion_chime(7);
+                        }
+                    }
+
+                    // Check achievements for score milestones up to 1,000,000 & all merges
+                    let newly_unlocked = crate::core::achievements::check_achievements(
+                        current_score,
+                        &save_data.merged_tiers,
+                        &mut save_data.unlocked_achievements,
+                    );
+                    for ach in newly_unlocked {
+                        particles.add_floating_text(
+                            format!("🏆 {} UNLOCKED!", ach.title),
+                            Vec2::new(VIRTUAL_WIDTH * 0.5, 410.0),
+                            Color::new(1.0, 0.90, 0.35, 1.0),
+                            30.0,
+                        );
+                        audio.play_fusion_chime(8);
+                        let _ = save_mgr.save(&save_data);
                     }
 
                     objective.on_merge(fus.new_tier);
@@ -735,27 +836,39 @@ pub async fn game_main() {
                     save_data.high_score = current_score;
                 }
 
-                // Endless runs end only when a settled planet remains above the rim for a full 5-second countdown.
-                let any_danger = bodies.iter().any(|b| b.above_danger_line());
-                if any_danger {
-                    danger_timer += dt;
-                    if danger_timer >= DANGER_TIME {
-                        danger_timer = DANGER_TIME;
-                        audio.play_game_over();
-                        save_data.runs_played += 1;
-                        save_data.stardust += run_stardust;
-                        let _ = save_mgr.save(&save_data);
-                        if !billing.is_ad_removed()
-                            && save_data.runs_played.is_multiple_of(INTERSTITIAL_RUN_INTERVAL)
-                            && ads.start_interstitial_ad()
-                        {
-                            game_state = GameState::WatchingAd;
-                        } else {
-                            game_state = GameState::GameOver;
+                // Danger overflow handling
+                // When Powerup 1 (Gravity Wave) is used, do not check for overflows during grace period
+                if gravity_wave_grace_timer > 0.0 {
+                    gravity_wave_grace_timer -= dt;
+                    danger_timer = 0.0;
+                } else {
+                    let overflow_active = danger_timer > 0.0;
+                    let any_danger = bodies.iter().any(|b| b.is_overflowing(overflow_active));
+                    if any_danger {
+                        danger_timer += dt;
+                        if danger_timer >= DANGER_TIME {
+                            danger_timer = DANGER_TIME;
+                            audio.play_game_over();
+                            save_data.runs_played += 1;
+                            save_data.stardust += run_stardust;
+                            let _ = save_mgr.save(&save_data);
+                            if !billing.is_ad_removed()
+                                && save_data.runs_played.is_multiple_of(INTERSTITIAL_RUN_INTERVAL)
+                                && ads.start_interstitial_ad()
+                            {
+                                game_state = GameState::WatchingAd;
+                            } else {
+                                game_state = GameState::GameOver;
+                            }
+                        }
+                    } else if danger_timer > 0.0 {
+                        // When overflow is active, dropping planets does not give recovery time
+                        // Only recover if bodies have truly cleared the upper jar threshold
+                        let near_rim = bodies.iter().any(|b| b.pos.y - b.radius < JAR_TOP_LINE + 35.0);
+                        if !near_rim {
+                            danger_timer = (danger_timer - dt * 1.5).max(0.0);
                         }
                     }
-                } else if danger_timer > 0.0 {
-                    danger_timer = (danger_timer - dt * 1.5).max(0.0);
                 }
             }
 
@@ -900,9 +1013,10 @@ pub async fn game_main() {
             name_focused = false;
         }
 
-        // Recreate high-resolution render target when display dimensions or scale change
-        let current_target_w = ((VIRTUAL_WIDTH * scale).round() as u32).max(720);
-        let current_target_h = ((VIRTUAL_HEIGHT * scale).round() as u32).max(1280);
+        // Recreate render target when profile dimensions change
+        let (res_w, res_h) = save_data.resolution_profile.dimensions();
+        let current_target_w = res_w;
+        let current_target_h = res_h;
         if target_w != current_target_w || target_h != current_target_h {
             target_w = current_target_w;
             target_h = current_target_h;
@@ -988,7 +1102,7 @@ pub async fn game_main() {
                 // ── Interactive Action Buttons ──
                 let bw = 360.0;
                 let bx = cx - bw * 0.5;
-                let play_y = VIRTUAL_HEIGHT * 0.52;
+                let play_y = VIRTUAL_HEIGHT * 0.49;
                 let play_hov = hit(ptr, bx, play_y, bw, 74.0);
 
                 // 1. PLAY ENDLESS (Celestial Emerald)
@@ -1011,30 +1125,50 @@ pub async fn game_main() {
                 draw_vector_play(bx + 42.0, play_y + 37.0, 26.0, WHITE);
                 draw_centered("PLAY ENDLESS", cx + 14.0, play_y + 48.0, 28.0, WHITE, f);
 
-                // 2. COSMIC VAULT / STORE (Amethyst Nebula)
-                let shop_y = play_y + 92.0;
-                let shop_hov = hit(ptr, bx, shop_y, bw, 66.0);
-                if shop_hov {
-                    draw_rectangle(bx - 3.0, shop_y - 3.0, bw + 6.0, 72.0, Color::new(0.55, 0.30, 0.88, 0.30));
+                // 2. ACHIEVEMENTS (Solar Gold)
+                let ach_y = play_y + 82.0;
+                let ach_hov = hit(ptr, bx, ach_y, bw, 64.0);
+                if ach_hov {
+                    draw_rectangle(bx - 3.0, ach_y - 3.0, bw + 6.0, 70.0, Color::new(0.95, 0.75, 0.20, 0.30));
                 }
                 draw_rectangle(
                     bx,
-                    shop_y,
+                    ach_y,
                     bw,
-                    66.0,
-                    if shop_hov {
-                        Color::new(0.50, 0.24, 0.82, 0.98)
+                    64.0,
+                    if ach_hov {
+                        Color::new(0.85, 0.65, 0.18, 0.98)
                     } else {
-                        Color::new(0.34, 0.16, 0.60, 0.92)
+                        Color::new(0.65, 0.45, 0.10, 0.92)
                     },
                 );
-                draw_rectangle_lines(bx, shop_y, bw, 66.0, 1.8, Color::new(0.76, 0.48, 1.0, 0.90));
-                draw_line(bx + 16.0, shop_y + 3.0, bx + bw - 16.0, shop_y + 3.0, 1.2, Color::new(0.85, 0.65, 1.0, 0.60));
-                draw_vector_gem(bx + 42.0, shop_y + 33.0, 24.0, Color::new(0.50, 0.95, 1.0, 1.0));
-                draw_centered("COSMIC STORE", cx + 14.0, shop_y + 43.0, 25.0, WHITE, f);
+                draw_rectangle_lines(bx, ach_y, bw, 64.0, 1.8, Color::new(1.0, 0.88, 0.40, 0.90));
+                draw_line(bx + 16.0, ach_y + 3.0, bx + bw - 16.0, ach_y + 3.0, 1.2, Color::new(1.0, 0.92, 0.60, 0.60));
+                draw_centered("⭐  COSMIC ACHIEVEMENTS", cx, ach_y + 42.0, 22.0, WHITE, f);
 
-                // 3. GLOBAL LEADERBOARD (Sapphire Deep)
-                let lb_y = shop_y + 82.0;
+                // 3. SETTINGS & DISPLAY (Quantum Cyan)
+                let set_y = ach_y + 72.0;
+                let set_hov = hit(ptr, bx, set_y, bw, 64.0);
+                if set_hov {
+                    draw_rectangle(bx - 3.0, set_y - 3.0, bw + 6.0, 70.0, Color::new(0.20, 0.75, 0.95, 0.30));
+                }
+                draw_rectangle(
+                    bx,
+                    set_y,
+                    bw,
+                    64.0,
+                    if set_hov {
+                        Color::new(0.18, 0.65, 0.85, 0.98)
+                    } else {
+                        Color::new(0.10, 0.45, 0.65, 0.92)
+                    },
+                );
+                draw_rectangle_lines(bx, set_y, bw, 64.0, 1.8, Color::new(0.40, 0.85, 1.0, 0.90));
+                draw_line(bx + 16.0, set_y + 3.0, bx + bw - 16.0, set_y + 3.0, 1.2, Color::new(0.70, 0.92, 1.0, 0.60));
+                draw_centered("⚙️  SETTINGS & DISPLAY", cx, set_y + 42.0, 22.0, WHITE, f);
+
+                // 4. GLOBAL LEADERBOARD (Sapphire Deep)
+                let lb_y = set_y + 72.0;
                 let lb_hov = hit(ptr, bx, lb_y, bw, 62.0);
                 if lb_hov {
                     draw_rectangle(bx - 3.0, lb_y - 3.0, bw + 6.0, 68.0, Color::new(0.20, 0.52, 0.85, 0.30));
@@ -1405,21 +1539,189 @@ pub async fn game_main() {
 
                 Hud::draw(current_score, save_data.high_score, save_data.stardust, danger_timer, f);
 
-                // Small rounded-style ability controls remain available, with no bearing on random drops.
-                let ab_y = 1140.0;
-                for (x, label, tint, hotkey) in [
-                    (JAR_LEFT, "WAVE  [1]", Color::new(0.28, 0.66, 1.0, 1.0), "Lift stack"),
-                    (JAR_RIGHT - 250.0, "FLARE  [2]", Color::new(1.0, 0.52, 0.27, 1.0), "Clear two"),
-                ] {
-                    let available = ability_charges > 0;
-                    let hovered = available && hit(ptr, x, ab_y, 250.0, 62.0);
-                    let fill = if hovered { tint } else { Color::new(tint.r * 0.48, tint.g * 0.48, tint.b * 0.48, if available { 0.94 } else { 0.36 }) };
-                    draw_rectangle(x, ab_y, 250.0, 62.0, fill);
-                    draw_rectangle_lines(x, ab_y, 250.0, 62.0, 1.5, Color::new(0.86, 0.94, 1.0, if available { 0.78 } else { 0.26 }));
-                    draw_centered(label, x + 125.0, ab_y + 27.0, 18.0, WHITE, f);
-                    draw_centered(hotkey, x + 125.0, ab_y + 48.0, 14.0, Color::new(0.92, 0.96, 1.0, 0.84), f);
+                // ── Strategic Powerup Controls (3 Buttons: Wave, Flare, Super Solar Flare) ──
+                let ab_y = 1136.0;
+                let ab_w = 170.0;
+                let ab_h = 66.0;
+
+                let powerup_configs = [
+                    (
+                        JAR_LEFT,
+                        "WAVE",
+                        "[1]",
+                        "Pull & Pop",
+                        Color::new(0.25, 0.75, 1.0, 1.0),
+                        ability_charges > 0,
+                    ),
+                    (
+                        JAR_LEFT + ab_w + 15.0,
+                        "FLARE",
+                        "[2]",
+                        "Burn Top 2",
+                        Color::new(1.0, 0.55, 0.22, 1.0),
+                        ability_charges > 0,
+                    ),
+                    (
+                        JAR_LEFT + (ab_w + 15.0) * 2.0,
+                        "SUPER FLARE",
+                        "[3]",
+                        "Wipe < Earth",
+                        Color::new(1.0, 0.82, 0.24, 1.0),
+                        super_flare_charges > 0,
+                    ),
+                ];
+
+                for (x, title, key, desc, accent, available) in powerup_configs {
+                    let hovered = available && hit(ptr, x, ab_y, ab_w, ab_h);
+                    let pulse = if available {
+                        ((get_time() as f32 * 6.0).sin() * 0.15 + 0.85).max(0.0)
+                    } else {
+                        0.35
+                    };
+
+                    // Frosted dark glass container
+                    let bg = if hovered {
+                        Color::new(accent.r * 0.28, accent.g * 0.28, accent.b * 0.28, 0.96)
+                    } else if available {
+                        Color::new(0.06, 0.08, 0.16, 0.92)
+                    } else {
+                        Color::new(0.04, 0.05, 0.10, 0.70)
+                    };
+                    draw_rectangle(x, ab_y, ab_w, ab_h, bg);
+
+                    // Specular top highlight sheen
+                    draw_line(
+                        x + 4.0,
+                        ab_y + 2.0,
+                        x + ab_w - 4.0,
+                        ab_y + 2.0,
+                        1.2,
+                        Color::new(1.0, 1.0, 1.0, if available { 0.50 } else { 0.15 }),
+                    );
+
+                    // Glowing neon outer ring
+                    let border_col = if hovered {
+                        accent
+                    } else if available {
+                        Color::new(accent.r, accent.g, accent.b, 0.80 * pulse)
+                    } else {
+                        Color::new(0.25, 0.30, 0.40, 0.40)
+                    };
+                    draw_rectangle_lines(x, ab_y, ab_w, ab_h, if available { 1.8 } else { 1.0 }, border_col);
+
+                    // Title
+                    let title_sz = if title == "SUPER FLARE" { 14.0 } else { 16.0 };
+                    draw_centered(
+                        title,
+                        x + ab_w * 0.5,
+                        ab_y + 24.0,
+                        title_sz,
+                        if available { WHITE } else { Color::new(0.60, 0.65, 0.75, 0.65) },
+                        f,
+                    );
+
+                    // Key pill badge
+                    draw_centered(
+                        key,
+                        x + ab_w * 0.5,
+                        ab_y + 42.0,
+                        13.0,
+                        if available { accent } else { Color::new(0.50, 0.55, 0.65, 0.50) },
+                        f,
+                    );
+
+                    // Subtext action description
+                    draw_centered(
+                        desc,
+                        x + ab_w * 0.5,
+                        ab_y + 57.0,
+                        11.0,
+                        if available { Color::new(0.85, 0.92, 1.0, 0.85) } else { Color::new(0.40, 0.45, 0.55, 0.50) },
+                        f,
+                    );
                 }
-                draw_centered(&format!("POWER  {} / {}", ability_charges, MAX_ABILITY_CHARGES), VIRTUAL_WIDTH * 0.5, 1230.0, 16.0, Color::new(0.70, 0.82, 1.0, 0.85), f);
+
+                // ── Dual Usage Meters ─────────────────────────────────────────
+                let meter_y = ab_y + ab_h + 16.0;
+
+                // Meter 1: Abilities 1 & 2 Charges (Cosmic Charges)
+                let m1_x = JAR_LEFT + 15.0;
+                draw_txt(
+                    &format!("CHARGES  {}/{}", ability_charges, MAX_ABILITY_CHARGES),
+                    m1_x,
+                    meter_y,
+                    15.0,
+                    Color::new(0.40, 0.85, 1.0, 0.90),
+                    f,
+                );
+                // 3 Pips for standard ability charges
+                for i in 0..MAX_ABILITY_CHARGES {
+                    let pip_x = m1_x + 130.0 + i as f32 * 18.0;
+                    let filled = i < ability_charges;
+                    draw_circle(
+                        pip_x,
+                        meter_y - 5.0,
+                        5.5,
+                        if filled { Color::new(0.35, 0.85, 1.0, 1.0) } else { Color::new(0.18, 0.25, 0.38, 0.60) },
+                    );
+                    draw_circle_lines(pip_x, meter_y - 5.0, 5.5, 1.0, Color::new(0.40, 0.85, 1.0, 0.70));
+                }
+
+                // Meter 2: SUPER SOLAR FLARE (Separate Usage Meter & 50k Score Gauge)
+                let m2_x = JAR_RIGHT - 230.0;
+                draw_txt(
+                    &format!("SUPER FLARE  {}/{}", super_flare_charges, MAX_SUPER_FLARE_CHARGES),
+                    m2_x,
+                    meter_y,
+                    15.0,
+                    Color::new(1.0, 0.82, 0.25, 0.95),
+                    f,
+                );
+                // 2 Pips for Super Solar Flare storage
+                for i in 0..MAX_SUPER_FLARE_CHARGES {
+                    let pip_x = m2_x + 160.0 + i as f32 * 20.0;
+                    let filled = i < super_flare_charges;
+                    draw_circle(
+                        pip_x,
+                        meter_y - 5.0,
+                        6.5,
+                        if filled { Color::new(1.0, 0.82, 0.20, 1.0) } else { Color::new(0.28, 0.22, 0.12, 0.70) },
+                    );
+                    draw_circle_lines(pip_x, meter_y - 5.0, 6.5, 1.2, Color::new(1.0, 0.85, 0.30, 0.85));
+                }
+
+                // 50,000 Score Progress Bar
+                let bar_w = 540.0;
+                let bar_h = 6.0;
+                let bar_x = JAR_LEFT;
+                let bar_y = meter_y + 12.0;
+                let score_in_bracket = (current_score % SUPER_FLARE_SCORE_INTERVAL) as f32;
+                let sf_ratio = if super_flare_charges >= MAX_SUPER_FLARE_CHARGES {
+                    1.0
+                } else {
+                    (score_in_bracket / SUPER_FLARE_SCORE_INTERVAL as f32).clamp(0.0, 1.0)
+                };
+
+                draw_rectangle(bar_x, bar_y, bar_w, bar_h, Color::new(0.10, 0.12, 0.20, 0.85));
+                draw_rectangle(
+                    bar_x,
+                    bar_y,
+                    bar_w * sf_ratio,
+                    bar_h,
+                    if super_flare_charges >= MAX_SUPER_FLARE_CHARGES {
+                        Color::new(1.0, 0.85, 0.25, 1.0)
+                    } else {
+                        Color::new(1.0, 0.65, 0.18, 0.90)
+                    },
+                );
+                draw_rectangle_lines(bar_x, bar_y, bar_w, bar_h, 1.0, Color::new(0.40, 0.50, 0.70, 0.40));
+
+                let sf_label = if super_flare_charges >= MAX_SUPER_FLARE_CHARGES {
+                    "SUPER FLARE MAX STORAGE REACHED (2/2)".to_string()
+                } else {
+                    format!("SUPER FLARE CHARGE: {:.1}k / 50k", score_in_bracket / 1000.0)
+                };
+                draw_centered(&sf_label, VIRTUAL_WIDTH * 0.5, bar_y + 18.0, 12.0, Color::new(0.75, 0.85, 0.98, 0.80), f);
             }
 
             // ── Sector Complete ──────────────────────────────────────────────
@@ -1745,6 +2047,63 @@ pub async fn game_main() {
                 }
             }
 
+            // ── Settings ─────────────────────────────────────────────────────
+            GameState::Settings => {
+                let action = SettingsModal::draw(
+                    save_data.resolution_profile,
+                    save_data.sound_enabled,
+                    save_data.haptics_enabled,
+                    ptr,
+                    ui_tap,
+                    f,
+                );
+                match action {
+                    SettingsAction::ChangeResolution(prof) => {
+                        save_data.resolution_profile = prof;
+                        let (rw, rh) = prof.dimensions();
+                        target_w = rw;
+                        target_h = rh;
+                        vt = render_target(target_w, target_h);
+                        vt.texture.set_filter(FilterMode::Linear);
+                        vcam = Camera2D {
+                            target: vec2(VIRTUAL_WIDTH * 0.5, VIRTUAL_HEIGHT * 0.5),
+                            zoom: vec2(2.0 / VIRTUAL_WIDTH, 2.0 / VIRTUAL_HEIGHT),
+                            offset: vec2(0.0, 0.0),
+                            rotation: 0.0,
+                            render_target: Some(vt.clone()),
+                            viewport: None,
+                        };
+                        let _ = save_mgr.save(&save_data);
+                    }
+                    SettingsAction::ToggleSound => {
+                        save_data.sound_enabled = !save_data.sound_enabled;
+                        let _ = save_mgr.save(&save_data);
+                    }
+                    SettingsAction::ToggleHaptics => {
+                        save_data.haptics_enabled = !save_data.haptics_enabled;
+                        let _ = save_mgr.save(&save_data);
+                    }
+                    SettingsAction::Close => {
+                        game_state = shop_return_state;
+                    }
+                    SettingsAction::None => {}
+                }
+            }
+
+            // ── Achievements ─────────────────────────────────────────────────
+            GameState::Achievements => {
+                let action = AchievementsModal::draw(
+                    &save_data.unlocked_achievements,
+                    current_score.max(save_data.high_score),
+                    ptr,
+                    ui_tap,
+                    f,
+                );
+                if matches!(action, AchievementsAction::Close) {
+                    game_state = shop_return_state;
+                }
+            }
+
             // ── Ad Overlay ───────────────────────────────────────────────────
             GameState::WatchingAd => {
                 AdOverlay::draw(f);
@@ -1788,6 +2147,9 @@ pub async fn game_main() {
                 stardust_doubled = false;
                 danger_timer = 0.0;
                 ability_charges = 0;
+                super_flare_charges = 0;
+                super_flare_milestone = 0;
+                gravity_wave_grace_timer = 0.0;
                 drop_cooldown = 0.0;
                 drop_pool = DropPool::default();
                 next_tier = drop_pool.random_tier();
@@ -1799,6 +2161,12 @@ pub async fn game_main() {
                 button_lock_timer = BUTTON_LOCK_DELAY;
                 shop_return_state = GameState::GameOver;
                 game_state = GameState::Shop;
+            }
+            GameOverAction::OpenAchievements => {
+                require_touch_release = true;
+                button_lock_timer = BUTTON_LOCK_DELAY;
+                shop_return_state = GameState::GameOver;
+                game_state = GameState::Achievements;
             }
             GameOverAction::SaveScore => {
                 require_touch_release = true;

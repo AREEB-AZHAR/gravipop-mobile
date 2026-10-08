@@ -9,6 +9,8 @@ pub enum GameState {
     GameOver,
     Leaderboard,
     Shop,
+    Settings,
+    Achievements,
     WatchingAd,
 }
 

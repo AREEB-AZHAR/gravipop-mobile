@@ -276,10 +276,12 @@ html, body {
 
 .codex-card {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   padding: 10px 12px;
-  background: rgba(18, 21, 44, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(18, 21, 44, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   transition: var(--transition);
   cursor: pointer;
@@ -288,8 +290,40 @@ html, body {
 .codex-card:hover {
   background: var(--panel-bg-hover);
   border-color: var(--tier-glow, var(--cyan-glow));
-  box-shadow: 0 0 16px -4px var(--tier-glow, rgba(56, 189, 248, 0.3));
-  transform: translateX(3px);
+  box-shadow: 0 0 18px -2px var(--tier-glow, rgba(56, 189, 248, 0.35));
+  transform: translateX(4px);
+}
+
+.card-thumb-wrap {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid var(--tier-glow, var(--cyan-glow));
+  box-shadow: 0 0 10px -2px var(--tier-glow, rgba(56, 189, 248, 0.5));
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.planet-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.codex-card:hover .planet-thumb {
+  transform: scale(1.15) rotate(6deg);
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .card-top {
@@ -300,8 +334,8 @@ html, body {
 }
 
 .tier-dot {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   box-shadow: 0 0 8px currentColor;
   flex-shrink: 0;
@@ -327,6 +361,7 @@ html, body {
   color: var(--text-sub);
   line-height: 1.35;
 }
+
 
 /* ── Center Game Viewport ── */
 #game-arena {

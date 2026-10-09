@@ -20,6 +20,7 @@ android/local.properties
 gravipop_save.json
 node_modules/
 dist/
+.firebase/
 .env
 .env.local
 .env.*.local

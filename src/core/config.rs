@@ -39,18 +39,20 @@ pub const OVERFLOW_ACTIVE_DROP_GRACE: f32 = 0.05; // Transit grace when dropping
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
 pub enum ResolutionProfile {
     LowBattery, // 540x960
-    #[default]
     Standard,   // 720x1280
+    #[default]
     HighDef,    // 1080x1920
     Ultra,      // 1440x2560
+    Extreme4K,  // 2160x3840
 }
 
 impl ResolutionProfile {
-    pub const ALL: [ResolutionProfile; 4] = [
+    pub const ALL: [ResolutionProfile; 5] = [
         ResolutionProfile::LowBattery,
         ResolutionProfile::Standard,
         ResolutionProfile::HighDef,
         ResolutionProfile::Ultra,
+        ResolutionProfile::Extreme4K,
     ];
 
     pub fn dimensions(self) -> (u32, u32) {
@@ -59,6 +61,7 @@ impl ResolutionProfile {
             Self::Standard => (720, 1280),
             Self::HighDef => (1080, 1920),
             Self::Ultra => (1440, 2560),
+            Self::Extreme4K => (2160, 3840),
         }
     }
 
@@ -66,17 +69,19 @@ impl ResolutionProfile {
         match self {
             Self::LowBattery => "540 x 960 (Power Saver)",
             Self::Standard => "720 x 1280 (Standard HD)",
-            Self::HighDef => "1080 x 1920 (Full HD)",
-            Self::Ultra => "1440 x 2560 (Ultra QHD)",
+            Self::HighDef => "1080 x 1920 (Full HD 1080p)",
+            Self::Ultra => "1440 x 2560 (Ultra QHD 1440p)",
+            Self::Extreme4K => "2160 x 3840 (4K UHD Extreme)",
         }
     }
 
     pub fn recommendation(self) -> &'static str {
         match self {
-            Self::LowBattery => "Recommended for Budget & Older Devices (Maximum FPS)",
+            Self::LowBattery => "Recommended for Budget & Older Devices (Max FPS)",
             Self::Standard => "Recommended for Balanced Everyday Mobile Play",
-            Self::HighDef => "Recommended for Flagship Phones, Mac & Laptops",
-            Self::Ultra => "Recommended for High-End Tablets & Desktop Monitors",
+            Self::HighDef => "Recommended Baseline for 1080p Screens, Laptops & Phones",
+            Self::Ultra => "Recommended for 1440p High-DPI Displays & Tablets",
+            Self::Extreme4K => "Recommended for 4K UHD Monitors & OLED TVs (Maximum Sharpness)",
         }
     }
 }

@@ -23,14 +23,31 @@ impl AdOverlay {
                 20,
             ),
         ] {
-            let dim = measure_text(text, font, size, 1.0);
+            let raster_size = size * 2;
+            let font_scale = 0.5;
+            let dim = measure_text(text, font, raster_size, font_scale);
+            let px = ((VIRTUAL_WIDTH - dim.width) * 0.5).round();
+            let py = y.round();
             draw_text_ex(
                 text,
-                (VIRTUAL_WIDTH - dim.width) * 0.5,
-                y,
+                px + 0.65,
+                py,
                 TextParams {
                     font,
-                    font_size: size,
+                    font_size: raster_size,
+                    font_scale,
+                    color: WHITE,
+                    ..Default::default()
+                },
+            );
+            draw_text_ex(
+                text,
+                px,
+                py,
+                TextParams {
+                    font,
+                    font_size: raster_size,
+                    font_scale,
                     color: WHITE,
                     ..Default::default()
                 },

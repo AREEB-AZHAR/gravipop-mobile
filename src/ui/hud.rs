@@ -15,20 +15,34 @@ impl Hud {
     ) {
         let cx = VIRTUAL_WIDTH * 0.5;
         let f = font;
-        let sz = |n: f32| n as u16;
 
         let center_txt = |text: &str, x: f32, y: f32, size: f32, color: Color| {
-            let dim = measure_text(text, f, sz(size), 1.0);
+            let raster_size = (size * 2.0).round().max(16.0) as u16;
+            let font_scale = 0.5;
+            let dim = measure_text(text, f, raster_size, font_scale);
             let px = (x - dim.width * 0.5).round();
             let py = y.round();
             draw_text_ex(
                 text,
-                px + 1.5,
-                py + 1.5,
+                px + 1.2,
+                py + 1.2,
                 TextParams {
                     font: f,
-                    font_size: sz(size),
-                    color: Color::new(0.0, 0.0, 0.0, 0.75),
+                    font_size: raster_size,
+                    font_scale,
+                    color: Color::new(0.0, 0.0, 0.0, 0.85),
+                    ..Default::default()
+                },
+            );
+            draw_text_ex(
+                text,
+                px + 0.65,
+                py,
+                TextParams {
+                    font: f,
+                    font_size: raster_size,
+                    font_scale,
+                    color,
                     ..Default::default()
                 },
             );
@@ -38,23 +52,39 @@ impl Hud {
                 py,
                 TextParams {
                     font: f,
-                    font_size: sz(size),
+                    font_size: raster_size,
+                    font_scale,
                     color,
                     ..Default::default()
                 },
             );
         };
         let left_txt = |text: &str, x: f32, y: f32, size: f32, color: Color| {
+            let raster_size = (size * 2.0).round().max(16.0) as u16;
+            let font_scale = 0.5;
             let px = x.round();
             let py = y.round();
             draw_text_ex(
                 text,
-                px + 1.5,
-                py + 1.5,
+                px + 1.2,
+                py + 1.2,
                 TextParams {
                     font: f,
-                    font_size: sz(size),
-                    color: Color::new(0.0, 0.0, 0.0, 0.75),
+                    font_size: raster_size,
+                    font_scale,
+                    color: Color::new(0.0, 0.0, 0.0, 0.85),
+                    ..Default::default()
+                },
+            );
+            draw_text_ex(
+                text,
+                px + 0.65,
+                py,
+                TextParams {
+                    font: f,
+                    font_size: raster_size,
+                    font_scale,
+                    color,
                     ..Default::default()
                 },
             );
@@ -64,7 +94,8 @@ impl Hud {
                 py,
                 TextParams {
                     font: f,
-                    font_size: sz(size),
+                    font_size: raster_size,
+                    font_scale,
                     color,
                     ..Default::default()
                 },

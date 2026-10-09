@@ -5,6 +5,12 @@ A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, a
 **[Play GraviPop](https://graviity-zeta.vercel.app/)** · [Game source](src/lib.rs) · [Android app](android/app) · [Shared leaderboard API](api/leaderboard.js)
 
 ## Recent updates
+- **4K UHD Extreme Sharpness & Bold Typography Overhaul.**
+  - **4K UHD Render Profile (2160 x 3840):** Added `ResolutionProfile::Extreme4K` in `src/core/config.rs` running a native 2160x3840 internal projection buffer, providing 4K monitors, high-DPI laptops, and OLED displays with crystal-clear 1:1 pixel rendering without bilinear upscaling blur.
+  - **1080p Baseline Default (`HighDef`):** Promoted `ResolutionProfile::HighDef` (1080x1920) to the engine's default profile (replacing 720p `Standard`), ensuring full-HD crispness immediately upon first launch across modern laptops, desktops, and phones.
+  - **Authentic Arial Bold Typography Upgrade:** Upgraded `assets/font.ttf`, `public/assets/font.ttf`, and `web/assets/font.ttf` to genuine **Arial Bold** (`arialbd.ttf`), replacing the previous thin Arial Regular. All glyphs now feature thick, confident, high-contrast stems that stand out vividly against deep cosmic backdrops.
+  - **2x Supersampled Font Rasterization:** Implemented `raster_size = (size * 2.0).round()` with `font_scale: 0.5` across all text drawing functions (`draw_centered`, `draw_txt`, `dcx`, `dtx`, HUD indicators, and floating particles). Eliminates small-glyph upscaling blur by rasterizing glyphs into the font texture atlas at double pixel density.
+  - **Hardware Bold Subpixel Strike:** Augmented text drawing with a subpixel horizontal strike (`+0.65px`) for extra typographic punch, high contrast, and crisp anti-aliased edge definition across all resolution profiles.
 - **Pre-Generated Static Audio Assets & Zero-Latency Sound Loading.**
   - **Static WAV Sound Files Saved in Repo:** Generated and saved 11 static 44.1kHz mono PCM WAV files into `assets/audio/` and `public/assets/audio/` (`chime_0.wav` through `chime_7.wav` for pentatonic harmonic bell merges, `slingshot.wav` for release wooshes, `game_over.wav` for resonant low booms, and `click.wav` for tactile button taps).
   - **Compile-Time Binary Embedding (`include_bytes!`):** Refactored `AudioEngine` in `src/audio/sound_synthesizer.rs` to load audio buffers directly from embedded byte slices (`include_bytes!("../../assets/audio/...")`), completely eliminating sample-by-sample trigonometric synthesis math and heavy runtime vector allocations.

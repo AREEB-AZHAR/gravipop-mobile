@@ -14,14 +14,30 @@ pub enum SettingsAction {
 pub struct SettingsModal;
 
 fn dtx(text: &str, x: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
-    let font_size = sz.round() as u16;
+    let raster_size = (sz * 2.0).round().max(16.0) as u16;
+    let font_scale = 0.5;
+    let px = x.round();
+    let py = y.round();
     draw_text_ex(
         text,
-        x.round(),
-        y.round(),
+        px + 0.65,
+        py,
         TextParams {
             font,
-            font_size,
+            font_size: raster_size,
+            font_scale,
+            color: col,
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        text,
+        px,
+        py,
+        TextParams {
+            font,
+            font_size: raster_size,
+            font_scale,
             color: col,
             ..Default::default()
         },
@@ -29,15 +45,31 @@ fn dtx(text: &str, x: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
 }
 
 fn dcx(text: &str, cx: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
-    let font_size = sz.round() as u16;
-    let dim = measure_text(text, font, font_size, 1.0);
+    let raster_size = (sz * 2.0).round().max(16.0) as u16;
+    let font_scale = 0.5;
+    let dim = measure_text(text, font, raster_size, font_scale);
+    let px = (cx - dim.width * 0.5).round();
+    let py = y.round();
     draw_text_ex(
         text,
-        (cx - dim.width * 0.5).round(),
-        y.round(),
+        px + 0.65,
+        py,
         TextParams {
             font,
-            font_size,
+            font_size: raster_size,
+            font_scale,
+            color: col,
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        text,
+        px,
+        py,
+        TextParams {
+            font,
+            font_size: raster_size,
+            font_scale,
             color: col,
             ..Default::default()
         },
@@ -139,7 +171,7 @@ impl SettingsModal {
         for profile in ResolutionProfile::ALL {
             let is_active = profile == current_res;
             let card_w = cw - 48.0;
-            let card_h = 76.0;
+            let card_h = 66.0;
             let hov = inside(mouse_pos, card_x + 24.0, row_y, card_w, card_h);
 
             let bg = if is_active {
@@ -180,8 +212,8 @@ impl SettingsModal {
             dtx(
                 profile.label(),
                 card_x + 72.0,
-                row_y + 30.0,
-                20.0,
+                row_y + 26.0,
+                19.0,
                 if is_active {
                     WHITE
                 } else {
@@ -192,8 +224,8 @@ impl SettingsModal {
             dtx(
                 profile.recommendation(),
                 card_x + 72.0,
-                row_y + 54.0,
-                15.0,
+                row_y + 49.0,
+                14.0,
                 if is_active {
                     Color::new(0.80, 0.94, 1.0, 0.98)
                 } else {
@@ -205,7 +237,7 @@ impl SettingsModal {
             // "ACTIVE" Badge
             if is_active {
                 let badge_x = card_x + card_w - 75.0;
-                let badge_y = row_y + 24.0;
+                let badge_y = row_y + 20.0;
                 draw_rectangle(
                     badge_x,
                     badge_y,
@@ -213,14 +245,14 @@ impl SettingsModal {
                     26.0,
                     Color::new(0.10, 0.65, 0.40, 0.95),
                 );
-                dcx("ACTIVE", badge_x + 37.5, badge_y + 19.0, 13.0, WHITE, font);
+                dcx("ACTIVE", badge_x + 37.5, badge_y + 18.0, 13.0, WHITE, font);
             }
 
             if hov && mouse_clicked && !is_active {
                 action = SettingsAction::ChangeResolution(profile);
             }
 
-            row_y += card_h + 12.0;
+            row_y += card_h + 8.0;
         }
 
         // ── Section 2: Audio & Feedback ──────────────────────────────────────────

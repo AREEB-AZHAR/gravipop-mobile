@@ -40,15 +40,32 @@ pub fn window_conf() -> Conf {
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub fn draw_centered(text: &str, cx: f32, y: f32, size: f32, color: Color, font: Option<&Font>) {
-    let sz = size.round() as u16;
-    let dim = measure_text(text, font, sz, 1.0);
+    let raster_size = (size * 2.0).round().max(16.0) as u16;
+    let font_scale = 0.5;
+    let dim = measure_text(text, font, raster_size, font_scale);
+    let px = (cx - dim.width * 0.5).round();
+    let py = y.round();
+    // Bold subpixel strike reinforcement (+0.65px)
     draw_text_ex(
         text,
-        (cx - dim.width * 0.5).round(),
-        y.round(),
+        px + 0.65,
+        py,
         TextParams {
             font,
-            font_size: sz,
+            font_size: raster_size,
+            font_scale,
+            color,
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        text,
+        px,
+        py,
+        TextParams {
+            font,
+            font_size: raster_size,
+            font_scale,
             color,
             ..Default::default()
         },
@@ -56,13 +73,31 @@ pub fn draw_centered(text: &str, cx: f32, y: f32, size: f32, color: Color, font:
 }
 
 pub fn draw_txt(text: &str, x: f32, y: f32, size: f32, color: Color, font: Option<&Font>) {
+    let raster_size = (size * 2.0).round().max(16.0) as u16;
+    let font_scale = 0.5;
+    let px = x.round();
+    let py = y.round();
+    // Bold subpixel strike reinforcement (+0.65px)
     draw_text_ex(
         text,
-        x.round(),
-        y.round(),
+        px + 0.65,
+        py,
         TextParams {
             font,
-            font_size: size.round() as u16,
+            font_size: raster_size,
+            font_scale,
+            color,
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        text,
+        px,
+        py,
+        TextParams {
+            font,
+            font_size: raster_size,
+            font_scale,
             color,
             ..Default::default()
         },

@@ -12,14 +12,30 @@ pub enum AchievementsAction {
 pub struct AchievementsModal;
 
 fn dtx(text: &str, x: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
-    let font_size = sz.round() as u16;
+    let raster_size = (sz * 2.0).round().max(16.0) as u16;
+    let font_scale = 0.5;
+    let px = x.round();
+    let py = y.round();
     draw_text_ex(
         text,
-        x.round(),
-        y.round(),
+        px + 0.65,
+        py,
         TextParams {
             font,
-            font_size,
+            font_size: raster_size,
+            font_scale,
+            color: col,
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        text,
+        px,
+        py,
+        TextParams {
+            font,
+            font_size: raster_size,
+            font_scale,
             color: col,
             ..Default::default()
         },
@@ -27,15 +43,31 @@ fn dtx(text: &str, x: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
 }
 
 fn dcx(text: &str, cx: f32, y: f32, sz: f32, col: Color, font: Option<&Font>) {
-    let font_size = sz.round() as u16;
-    let dim = measure_text(text, font, font_size, 1.0);
+    let raster_size = (sz * 2.0).round().max(16.0) as u16;
+    let font_scale = 0.5;
+    let dim = measure_text(text, font, raster_size, font_scale);
+    let px = (cx - dim.width * 0.5).round();
+    let py = y.round();
     draw_text_ex(
         text,
-        (cx - dim.width * 0.5).round(),
-        y.round(),
+        px + 0.65,
+        py,
         TextParams {
             font,
-            font_size,
+            font_size: raster_size,
+            font_scale,
+            color: col,
+            ..Default::default()
+        },
+    );
+    draw_text_ex(
+        text,
+        px,
+        py,
+        TextParams {
+            font,
+            font_size: raster_size,
+            font_scale,
             color: col,
             ..Default::default()
         },

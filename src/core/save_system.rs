@@ -66,7 +66,7 @@ impl Default for SaveData {
             unlocked_skins: vec!["Cosmic Neon".to_string()],
             sound_enabled: true,
             haptics_enabled: true,
-            resolution_profile: crate::core::config::ResolutionProfile::Standard,
+            resolution_profile: crate::core::config::ResolutionProfile::HighDef,
             unlocked_achievements: Vec::new(),
             merged_tiers: Vec::new(),
         }

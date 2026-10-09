@@ -128,18 +128,33 @@ impl ParticleEngine {
             let alpha = (t.lifetime / t.max_lifetime).clamp(0.0, 1.0);
             let mut col = t.color;
             col.a *= alpha;
-            let sz = t.font_size.round() as u16;
+            let raster_sz = (t.font_size * 2.0).round().max(16.0) as u16;
+            let font_scale = 0.5;
             let px = (t.pos.x - t.width * 0.5).round();
             let py = t.pos.y.round();
-            // Soft drop shadow for razor-sharp readability against glowing celestial bodies
+            // Drop shadow for razor-sharp readability against glowing celestial bodies
             draw_text_ex(
                 &t.text,
-                px + 1.5,
-                py + 1.5,
+                px + 1.2,
+                py + 1.2,
                 TextParams {
                     font,
-                    font_size: sz,
-                    color: Color::new(0.0, 0.0, 0.0, col.a * 0.75),
+                    font_size: raster_sz,
+                    font_scale,
+                    color: Color::new(0.0, 0.0, 0.0, col.a * 0.85),
+                    ..Default::default()
+                },
+            );
+            // Bold strike reinforcement
+            draw_text_ex(
+                &t.text,
+                px + 0.65,
+                py,
+                TextParams {
+                    font,
+                    font_size: raster_sz,
+                    font_scale,
+                    color: col,
                     ..Default::default()
                 },
             );
@@ -149,7 +164,8 @@ impl ParticleEngine {
                 py,
                 TextParams {
                     font,
-                    font_size: sz,
+                    font_size: raster_sz,
+                    font_scale,
                     color: col,
                     ..Default::default()
                 },

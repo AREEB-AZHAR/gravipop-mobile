@@ -1,5 +1,6 @@
 import { inject } from "@vercel/analytics";
 import { CELESTIAL_TIERS } from "./codex.js";
+import { app as firebaseApp } from "./firebase.js";
 
 inject();
 if (import.meta.env.VITE_LEADERBOARD_URL) {

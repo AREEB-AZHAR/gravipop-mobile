@@ -2,9 +2,16 @@
 
 A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, and desktop.
 
-**[Play GraviPop](https://graviity-zeta.vercel.app/)** · [Game source](src/lib.rs) · [Android app](android/app) · [Shared leaderboard API](api/leaderboard.js)
+**[Play GraviPop (Firebase Hosting)](https://gravipop-mobile.web.app)** · **[Play GraviPop (Vercel)](https://graviity-zeta.vercel.app/)** · [Game source](src/lib.rs) · [Android app](android/app) · [Shared leaderboard API](api/leaderboard.js)
 
 ## Recent updates
+- **Official Firebase Web App Setup & High-Performance Firebase Hosting Deployment.**
+  - **Firebase Project Context Linked:** Initialized `.firebaserc` configuring the active Firebase project `gravipop-mobile` in accordance with `firebase-basics` agent guidelines.
+  - **Web App Registered:** Programmatically created and registered the Web App `gravipop-web` with App ID `1:763464770635:web:272b5f4de49c2682c559ce` in project `gravipop-mobile`.
+  - **Modular Firebase Web SDK (`firebase.js`):** Integrated `firebase` modular v12+ SDK in `src/web/firebase.js` with active project configuration and browser-checked `getAnalytics()` integration; imported into `src/web/main.js`.
+  - **Optimized WebAssembly Hosting Configuration (`firebase.json`):** Formatted production hosting for Vite `dist/` with dedicated `Content-Type: application/wasm` and `Cache-Control: public, max-age=31536000, immutable` headers for `.wasm` files to guarantee browser streaming compilation, along with font CORS headers and SPA rewrites.
+  - **Production Deployment Verified:** Successfully deployed live to Firebase Hosting with CDN edge caching at **[gravipop-mobile.web.app](https://gravipop-mobile.web.app)** and **[gravipop-mobile.firebaseapp.com](https://gravipop-mobile.firebaseapp.com)**.
+  - **Agent Skills Suite Installed:** Configured 13 official Firebase Agent Skills (`.agents/skills/`) and generated `skills-lock.json` for deterministic AI workflow reproducibility.
 - **4K UHD Extreme Sharpness & Bold Typography Overhaul.**
   - **4K UHD Render Profile (2160 x 3840):** Added `ResolutionProfile::Extreme4K` in `src/core/config.rs` running a native 2160x3840 internal projection buffer, providing 4K monitors, high-DPI laptops, and OLED displays with crystal-clear 1:1 pixel rendering without bilinear upscaling blur.
   - **1080p Baseline Default (`HighDef`):** Promoted `ResolutionProfile::HighDef` (1080x1920) to the engine's default profile (replacing 720p `Standard`), ensuring full-HD crispness immediately upon first launch across modern laptops, desktops, and phones.
@@ -384,8 +391,54 @@ assets/
   audio/                         Static master 44.1kHz WAV sound files embedded at compile time
   celestial_atlas.jpg            Original 10-tier master illustrated sprite atlas
   planets/                       High-res cropped tier portraits (Tiers 1-13)
-  font.ttf                       Chivo game typography
 Cargo.lock                       Reproducible Rust dependency versions
 vercel.json                      Vite deployment and WASM headers
+.firebaserc                      Firebase active project mapping (gravipop-mobile)
+firebase.json                    Firebase Hosting config, WASM MIME & immutable cache headers, rewrites
+.agents/skills/                  13 official Firebase Agent Skills (Auth, Firestore, Hosting, Crashlytics, etc.)
+skills-lock.json                 Agent skills lockfile for reproducible AI tooling
+src/web/firebase.js              Modular Firebase SDK App & Analytics initialization
 ~~~
+
+## Firebase Hosting & Web SDK Setup
+
+The web version of GraviPop is deployed to **Firebase Hosting** with optimized WebAssembly headers and integrated Firebase Web SDK analytics.
+
+### Prerequisites & Authentication
+1. Verify the Firebase CLI via `npx`:
+   ~~~powershell
+   npx -y firebase-tools@latest --version
+   ~~~
+2. Authenticate with your Firebase account (browser or headless):
+   ~~~powershell
+   npx -y firebase-tools@latest login
+   ~~~
+3. Confirm active project is set to `gravipop-mobile`:
+   ~~~powershell
+   npx -y firebase-tools@latest use gravipop-mobile
+   ~~~
+
+### Local Build & Deployment
+1. Install node dependencies (including `firebase`):
+   ~~~powershell
+   npm install
+   ~~~
+2. Build the production web bundle into `dist/`:
+   ~~~powershell
+   npm run build
+   ~~~
+3. Test locally with the Firebase Hosting emulator (optional):
+   ~~~powershell
+   npx -y firebase-tools@latest emulators:start --only hosting
+   ~~~
+4. Deploy live to Firebase Hosting:
+   ~~~powershell
+   npx -y firebase-tools@latest deploy --only hosting
+   ~~~
+
+### Live Deployments
+- **Production URL:** [https://gravipop-mobile.web.app](https://gravipop-mobile.web.app)
+- **Alternate URL:** [https://gravipop-mobile.firebaseapp.com](https://gravipop-mobile.firebaseapp.com)
+- **Firebase Console:** [https://console.firebase.google.com/project/gravipop-mobile/overview](https://console.firebase.google.com/project/gravipop-mobile/overview)
+
 

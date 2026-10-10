@@ -24,13 +24,23 @@
     let isSubmitting = false;
     let leaderboardVersion = 0;
     function isConfigured() { return true; }
-    function leaderboardUrl() { return window.GRAVIPOP_LEADERBOARD_URL || "/api/leaderboard"; }
+    function leaderboardUrl() {
+        if (window.GRAVIPOP_LEADERBOARD_URL) return window.GRAVIPOP_LEADERBOARD_URL;
+        if (typeof window !== "undefined" && window.location?.hostname && (window.location.hostname.includes("web.app") || window.location.hostname.includes("firebaseapp.com"))) {
+            return "https://graviity-zeta.vercel.app/api/leaderboard";
+        }
+        return "/api/leaderboard";
+    }
     async function leaderboardRequest(options) {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 12000);
         try {
             const response = await fetch(leaderboardUrl(), { ...options, signal: controller.signal });
             if (!response.ok) throw new Error("Leaderboard unavailable");
+            const contentType = response.headers?.get ? response.headers.get("content-type") : "application/json";
+            if (contentType && !contentType.includes("application/json") && !contentType.includes("text/json")) {
+                throw new Error("Invalid response format from leaderboard provider");
+            }
             return await response.json();
         }
         finally { clearTimeout(timeout); }

@@ -272,6 +272,20 @@ Live ads mode requires your own **Google Ad Manager ad-unit paths**, such as /NE
 
 Add the VITE_ values in Vercel and redeploy. Missing live unit paths never fall back to Google's demo inventory.
 
+#### Firebase API Key Hardening & Restrictions
+Firebase client keys identify projects to Google APIs. To prevent quota exhaustion or unauthorized third-party origins from consuming project resources:
+1. Open **[Google Cloud Console Credentials (gravipop-mobile)](https://console.cloud.google.com/apis/credentials?project=gravipop-mobile)**.
+2. Select your Firebase Web API Key (e.g. *Browser key (auto created by Firebase)*).
+3. Under **Application restrictions**, select **Websites (HTTP referrers)** and add:
+   - `https://gravipop-mobile.web.app/*`
+   - `https://gravipop-mobile.firebaseapp.com/*`
+   - `https://graviity-zeta.vercel.app/*`
+   - `http://localhost:*/*`
+   - `http://127.0.0.1:*/*`
+4. Under **API restrictions**, select **Restrict key** and restrict to only required APIs (*Firebase Installations API*, *Firebase Management API*, *Identity Toolkit API*, *Token Service API*).
+5. Save changes (propagation takes 1–5 minutes globally).
+6. To rotate keys, generate a new restricted key in the Console, update `.env` (`VITE_FIREBASE_API_KEY`), and delete the retired key.
+
 Sidebar creatives appear only when they fit in empty margins beside the 9:16 game. They hide on narrow screens, failed/no-fill requests, and no-ads saves. They do not cover gameplay or mobile controls. Interstitials use the existing run interval; unavailable ads do not block results. Rewarded ads remain player-selected.
 
 References: [rewarded web sample](https://developers.google.com/publisher-tag/samples/display-rewarded-ad), [gaming interstitial sample](https://developers.google.com/publisher-tag/samples/display-gaming-interstitial-ad), [publisher consent settings](https://support.google.com/admanager/answer/7673898).

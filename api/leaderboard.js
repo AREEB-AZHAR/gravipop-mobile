@@ -4,12 +4,12 @@ if (typeof process.loadEnvFile === "function") {
   } catch (_) {}
 }
 
-const DREAMLO_PUBLIC = process.env.DREAMLO_PUBLIC_CODE || process.env.VITE_DREAMLO_PUBLIC_CODE || "";
+const DREAMLO_PUBLIC = process.env.DREAMLO_PUBLIC_CODE || process.env.VITE_DREAMLO_PUBLIC_CODE || "6ac4ec7f8f40bb15a8cf34f8";
 const DREAMLO_PRIVATE = process.env.DREAMLO_PRIVATE_KEY || "";
 
 export async function fetchGlobalLeaderboard() {
   if (!DREAMLO_PUBLIC) {
-    console.warn("Dreamlo public code is not configured in environment variables");
+    console.warn("Dreamlo public code is not configured");
     return [];
   }
   try {

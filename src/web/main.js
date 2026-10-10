@@ -3,9 +3,14 @@ import { CELESTIAL_TIERS } from "./codex.js";
 import { app as firebaseApp } from "./firebase.js";
 
 inject();
-if (import.meta.env.VITE_LEADERBOARD_URL) {
-  window.GRAVIPOP_LEADERBOARD_URL = import.meta.env.VITE_LEADERBOARD_URL;
-}
+
+const defaultLeaderboardUrl =
+  typeof window !== "undefined" &&
+  (window.location.hostname.includes("web.app") || window.location.hostname.includes("firebaseapp.com"))
+    ? "https://graviity-zeta.vercel.app/api/leaderboard"
+    : "/api/leaderboard";
+
+window.GRAVIPOP_LEADERBOARD_URL = import.meta.env.VITE_LEADERBOARD_URL || defaultLeaderboardUrl;
 
 window.GravipopAds?.configure({
   mode: import.meta.env.VITE_ADS_MODE || "test",

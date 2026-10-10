@@ -280,8 +280,10 @@ Firebase client keys identify projects to Google APIs. To prevent quota exhausti
    - `https://gravipop-mobile.web.app/*`
    - `https://gravipop-mobile.firebaseapp.com/*`
    - `https://graviity-zeta.vercel.app/*`
-   - `http://localhost:*/*`
-   - `http://127.0.0.1:*/*`
+   - `http://localhost:3000/*`
+   - `http://localhost:8080/*`
+   - `http://localhost/*`
+   - `http://127.0.0.1/*`
 4. Under **API restrictions**, select **Restrict key** and restrict to only required APIs (*Firebase Installations API*, *Firebase Management API*, *Identity Toolkit API*, *Token Service API*).
 5. Save changes (propagation takes 1–5 minutes globally).
 6. To rotate keys, generate a new restricted key in the Console, update `.env` (`VITE_FIREBASE_API_KEY`), and delete the retired key.

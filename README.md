@@ -5,13 +5,19 @@ A cosmic merge puzzle game built with Rust and Macroquad for the web, Android, a
 **[Play GraviPop (Firebase Hosting)](https://gravipop-mobile.web.app)** · **[Play GraviPop (Vercel)](https://graviity-zeta.vercel.app/)** · [Game source](src/lib.rs) · [Android app](android/app) · [Shared leaderboard API](api/leaderboard.js)
 
 ## Recent updates
+- **Security & Secret Sanitation Overhaul: Environment Variables & Pre-Commit Protection.**
+  - **Zero Plain-Text Secrets in Source Code:** Completely removed hardcoded API keys (`AIza...`) and Dreamlo private keys (`DREAMLO_PRIVATE...`) from all tracked source files (`src/web/firebase.js` and `api/leaderboard.js`).
+  - **Modular Environment Configuration (`.env` & `.env.example`):** Migrated all sensitive configuration and endpoints into a secure `.env` file (strictly excluded by `.gitignore`). Updated `.env.example` with clear documentation and variable templates for Firebase, Dreamlo, Google Ads, and custom leaderboard endpoints.
+  - **Client-Side Safe Env Loading (`import.meta.env`):** In `src/web/firebase.js`, Firebase configuration is dynamically populated from `import.meta.env.VITE_FIREBASE_*` with runtime guard checks, ensuring graceful fallback without app crashes if keys are unconfigured.
+  - **Server-Side Native Env Loading (`process.env`):** In `api/leaderboard.js`, Dreamlo credentials are loaded securely using Node's native `process.loadEnvFile('.env')` and `process.env`, protecting private administrative keys from client bundles.
+  - **Automated Pre-Commit Secret Scanner (`scripts/check-secrets.mjs`):** Implemented an automated pre-commit hook that scans every staged file for exposed API keys, private tokens, or sensitive files (`.env`, `.pem`, `id_rsa`), aborting commits immediately if any leakage is detected. Also callable via `npm run check:secrets`.
+  - **Repository Directory Sanitation (`.gitignore`):** Cleaned over 14,000 files from `.agents/` and `skills-lock.json` from git tracking. Updated `.gitignore` to strictly exclude `.agents/`, `.vscode/`, `.idea/`, `.gemini/`, `skills-lock.json`, `*.log`, and temporary editor files.
 - **Official Firebase Web App Setup & High-Performance Firebase Hosting Deployment.**
   - **Firebase Project Context Linked:** Initialized `.firebaserc` configuring the active Firebase project `gravipop-mobile` in accordance with `firebase-basics` agent guidelines.
   - **Web App Registered:** Programmatically created and registered the Web App `gravipop-web` with App ID `1:763464770635:web:272b5f4de49c2682c559ce` in project `gravipop-mobile`.
   - **Modular Firebase Web SDK (`firebase.js`):** Integrated `firebase` modular v12+ SDK in `src/web/firebase.js` with active project configuration and browser-checked `getAnalytics()` integration; imported into `src/web/main.js`.
   - **Optimized WebAssembly Hosting Configuration (`firebase.json`):** Formatted production hosting for Vite `dist/` with dedicated `Content-Type: application/wasm` and `Cache-Control: public, max-age=31536000, immutable` headers for `.wasm` files to guarantee browser streaming compilation, along with font CORS headers and SPA rewrites.
   - **Production Deployment Verified:** Successfully deployed live to Firebase Hosting with CDN edge caching at **[gravipop-mobile.web.app](https://gravipop-mobile.web.app)** and **[gravipop-mobile.firebaseapp.com](https://gravipop-mobile.firebaseapp.com)**.
-  - **Agent Skills Suite Installed:** Configured 13 official Firebase Agent Skills (`.agents/skills/`) and generated `skills-lock.json` for deterministic AI workflow reproducibility.
 - **4K UHD Extreme Sharpness & Bold Typography Overhaul.**
   - **4K UHD Render Profile (2160 x 3840):** Added `ResolutionProfile::Extreme4K` in `src/core/config.rs` running a native 2160x3840 internal projection buffer, providing 4K monitors, high-DPI laptops, and OLED displays with crystal-clear 1:1 pixel rendering without bilinear upscaling blur.
   - **1080p Baseline Default (`HighDef`):** Promoted `ResolutionProfile::HighDef` (1080x1920) to the engine's default profile (replacing 720p `Standard`), ensuring full-HD crispness immediately upon first launch across modern laptops, desktops, and phones.
@@ -144,6 +150,12 @@ cd gravipop-mobile
 rustup update stable
 rustup target add wasm32-unknown-unknown
 npm ci
+
+# Configure local environment variables (never committed to git)
+Copy-Item .env.example .env
+
+# Verify staged files contain no exposed secrets or API keys
+npm run check:secrets
 ~~~
 
 Compiled web assets are included, so Rust is unnecessary for running the existing web build. Install Rust to edit or rebuild the game. Linux desktop builds also need the platform libraries documented by [Macroquad](https://github.com/not-fl3/macroquad).
@@ -229,19 +241,34 @@ In Cargo, dashes (`-`) are normalized to underscores (`_`) when generating `.pdb
 
 No production ad IDs have been supplied. The game uses **actual SDK-served Google test ads**, which generate no income. Native desktop builds have no ad provider; rewarded actions remain unavailable there.
 
-### Website
+### Website & Environment Configuration
 
-Copy .env.example to .env.local. VITE_ADS_MODE accepts **test** (default), **off**, or **live**.
+Copy `.env.example` to `.env` (or `.env.local`). `VITE_ADS_MODE` accepts **test** (default), **off**, or **live**.
 
 ~~~dotenv
+# Google Ad Manager Web Ads
 VITE_ADS_MODE=test
 VITE_GOOGLE_AD_REWARDED_UNIT=
 VITE_GOOGLE_AD_INTERSTITIAL_UNIT=
 VITE_GOOGLE_AD_SIDEBAR_LEFT_UNIT=
 VITE_GOOGLE_AD_SIDEBAR_RIGHT_UNIT=
+VITE_LEADERBOARD_URL=
+
+# Dreamlo Global Leaderboard API Keys (Server-side / API functions only)
+DREAMLO_PUBLIC_CODE=your_dreamlo_public_code
+DREAMLO_PRIVATE_KEY=your_dreamlo_private_key
+
+# Firebase Web App Configuration (Vite client-side)
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_firebase_app_id
+VITE_FIREBASE_MEASUREMENT_ID=your_firebase_measurement_id
 ~~~
 
-Live mode requires your own **Google Ad Manager ad-unit paths**, such as /NETWORK_CODE/UNIT_NAME, rather than AdMob IDs or an AdSense publisher ID. Configure rewarded and gaming-interstitial inventory in your account; the gaming interstitial format requires account access. Configure your publisher's consent message / certified CMP before live inventory and include its generated tag in index.html. Android UMP does not manage website consent.
+Live ads mode requires your own **Google Ad Manager ad-unit paths**, such as /NETWORK_CODE/UNIT_NAME, rather than AdMob IDs or an AdSense publisher ID. Configure rewarded and gaming-interstitial inventory in your account; the gaming interstitial format requires account access. Configure your publisher's consent message / certified CMP before live inventory and include its generated tag in index.html. Android UMP does not manage website consent.
 
 Add the VITE_ values in Vercel and redeploy. Missing live unit paths never fall back to Google's demo inventory.
 

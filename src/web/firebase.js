@@ -1,23 +1,24 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
-// GraviPop Web App Firebase configuration
+// GraviPop Web App Firebase configuration loaded securely from environment variables
 export const firebaseConfig = {
-  apiKey: "AIzaSyB_po2OjopKvtGzS2onFhBLRWOE6qAYnn4",
-  authDomain: "gravipop-mobile.firebaseapp.com",
-  projectId: "gravipop-mobile",
-  storageBucket: "gravipop-mobile.firebasestorage.app",
-  messagingSenderId: "763464770635",
-  appId: "1:763464770635:web:272b5f4de49c2682c559ce",
-  measurementId: "G-EHP5QCL9NY"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ""
 };
 
-// Initialize Firebase App
-export const app = initializeApp(firebaseConfig);
+// Initialize Firebase App only if configuration is provided
+export const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+export const app = isConfigured ? initializeApp(firebaseConfig) : null;
 
-// Initialize Firebase Analytics if supported
+// Initialize Firebase Analytics if supported and app is configured
 export let analytics = null;
-if (typeof window !== "undefined") {
+if (typeof window !== "undefined" && app) {
   isSupported()
     .then((supported) => {
       if (supported) {

@@ -18,6 +18,7 @@
     "leaderboard:delete": "node scripts/manage-leaderboard.mjs delete",
     "leaderboard:clear": "node scripts/manage-leaderboard.mjs clear",
     "build:all": "npm run build:wasm && npm run build",
+    "check:secrets": "node scripts/check-secrets.mjs",
     "start": "node server.mjs"
   },
   "devDependencies": {

@@ -1,10 +1,17 @@
-// GraviPop Global Shared Leaderboard API (Vercel Serverless Function & Node Dev Handler)
-// Synchronizes scores globally across all devices & players.
+if (typeof process.loadEnvFile === "function") {
+  try {
+    process.loadEnvFile(".env");
+  } catch (_) {}
+}
 
-const DREAMLO_PUBLIC = "6ac4ec7f8f40bb15a8cf34f8";
-const DREAMLO_PRIVATE = "BKaONkQHlU2ti8qBqP3VjAQ2-zOQJxNUq6sc1A7bwpcQ";
+const DREAMLO_PUBLIC = process.env.DREAMLO_PUBLIC_CODE || process.env.VITE_DREAMLO_PUBLIC_CODE || "";
+const DREAMLO_PRIVATE = process.env.DREAMLO_PRIVATE_KEY || "";
 
 export async function fetchGlobalLeaderboard() {
+  if (!DREAMLO_PUBLIC) {
+    console.warn("Dreamlo public code is not configured in environment variables");
+    return [];
+  }
   try {
     const res = await fetch(`http://dreamlo.com/lb/${DREAMLO_PUBLIC}/json`, {
       headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(5000)
@@ -50,6 +57,10 @@ export async function submitGlobalScore(name, score) {
     throw new Error("Display name must be between 3 and 20 characters");
   }
 
+  if (!DREAMLO_PRIVATE) {
+    throw new Error("Leaderboard private key is not configured on server (DREAMLO_PRIVATE_KEY)");
+  }
+
   // 1. Try-catch to check for existing username entries on the leaderboard (exact case-match)
   try {
     const existingScores = await fetchGlobalLeaderboard();
@@ -91,6 +102,10 @@ export async function deleteGlobalScore(name) {
     throw new Error("Display name is required for deletion");
   }
 
+  if (!DREAMLO_PRIVATE) {
+    throw new Error("Leaderboard private key is not configured on server (DREAMLO_PRIVATE_KEY)");
+  }
+
   // Also remove exact matching entries from Dreamlo
   try {
     const existingScores = await fetchGlobalLeaderboard();
@@ -117,6 +132,10 @@ export async function deleteGlobalScore(name) {
 }
 
 export async function clearGlobalLeaderboard() {
+  if (!DREAMLO_PRIVATE) {
+    throw new Error("Leaderboard private key is not configured on server (DREAMLO_PRIVATE_KEY)");
+  }
+
   const res = await fetch(`http://dreamlo.com/lb/${DREAMLO_PRIVATE}/clear`, {
     signal: AbortSignal.timeout(5000)
   });
